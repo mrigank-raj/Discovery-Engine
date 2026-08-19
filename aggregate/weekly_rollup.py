@@ -53,24 +53,24 @@ def fetch_classified_data() -> pd.DataFrame:
             
     return pd.DataFrame(records)
 
-def calculate_severity(df_theme: pd.DataFrame) -> float:
+def calculate_severity(df_theme: pd.DataFrame) -> int:
     """
     Calculate severity based on purchase_outcome and sentiment.
     N = count where purchase_outcome=not_purchased AND sentiment=negative
     rate = N / total_records
     """
     if len(df_theme) == 0:
-        return 1.0
+        return 1
         
     n = len(df_theme[(df_theme["purchase_outcome"] == "not_purchased") & (df_theme["sentiment"] == "negative")])
     rate = n / len(df_theme)
     
     if rate >= 0.50:
-        return 3.0
+        return 3
     elif rate >= 0.20:
-        return 2.0
+        return 2
     else:
-        return 1.0
+        return 1
 
 def calculate_trend(current_freq: int, prior_freq: int) -> tuple[str, float, float]:
     """
@@ -237,6 +237,7 @@ def run_weekly_rollup() -> dict:
                 "frequency": weekly_count,
                 "severity": severity,
                 "trend": trend_str,
+                "trend_multiplier": multiplier,
                 "score": score,
                 "quote_raw_ids": selected_quotes,
             })
