@@ -1,0 +1,23 @@
+{
+  "play_store": {
+    "package_name": "com.myntra.android",
+    "country": "in",
+    "language": "en"
+  },
+  "reddit": {
+    "subreddits": ["IndianFashionAddicts", "india"],
+    "search_queries": [
+      "Myntra",
+      "Myntra wishlist",
+      "Myntra size chart",
+      "Myntra return",
+      "Myntra vs"
+    ]
+  },
+  "youtube": {
+    "video_ids": []
+  },
+  "product_pages": {
+    "urls": []
+  }
+}

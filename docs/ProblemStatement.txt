@@ -1,0 +1,167 @@
+# AI-Powered Discovery Engine — Problem Statement & Architecture (Final)
+### NextLeap Grad Project — Myntra Wishlist-to-Purchase Behavior
+
+---
+
+## Restated Problem
+
+Before proposing any product solution, build a system — not a manual review — that analyzes user feedback about Myntra at scale, on an ongoing basis, and surfaces **ranked, quantified opportunity areas** tied to a specific business metric: **wishlist-to-purchase conversion within 30 days**.
+
+The system must go beyond summarization or sentiment analysis. It must answer, with evidence and frequency data:
+
+- Why users add products to wishlists
+- What prevents wishlisted products from being purchased
+- What uncertainties remain after a product is shortlisted
+- What causes purchase postponement
+- How users compare multiple shortlisted products
+- What information users seek outside Myntra before buying
+- The role of fit, size, styling, price, reviews, occasion, and social validation
+- When wishlist behavior reflects genuine intent vs. bookmarking
+- How these behaviors differ across user segments
+- What unmet needs recur consistently across conversations
+
+No monetary-incentive solutions are in scope for the eventual product recommendation — this discovery engine exists to find the underlying problem first, before any solution is proposed.
+
+---
+
+## Core Design Principle
+
+A one-time snapshot goes stale immediately — new reviews and discussions appear daily. The engine is built as a **living, weekly-refreshing pipeline**, not a static report, so opportunity areas can be tracked by **trend** (growing/shrinking) as well as raw frequency. All tooling is free-tier — no paid APIs, no subscriptions.
+
+---
+
+## Scope
+
+**Myntra only.** AJIO, Nykaa Fashion, and Apple App Store are deliberately excluded — not scraped, not tagged, not compared. AJIO/other platforms surface only incidentally, when a Myntra user mentions comparing to another site (captured by `comparison_behavior: cross_platform_comparison` and `external_info_sought: other_site_price_check` in the taxonomy below). This is a stated scoping decision, not a gap.
+
+---
+
+## Data Sources
+
+**Automated — scraped on a weekly schedule:**
+1. **Google Play Store** — Myntra app reviews (`google-play-scraper`)
+2. **Reddit** — r/IndianFashionAddicts, r/india, keyword search ("Myntra," "wishlist," "size chart," "return," "Myntra vs" to catch cross-platform comparison mentions) (Reddit API, free tier)
+3. **YouTube comments** — comments on ~10–15 seed Myntra haul/review videos (YouTube Data API v3, free quota)
+4. **Myntra product review pages** — on-site product reviews (basic web scraping, public HTML, no API needed)
+
+**Manual — topped up occasionally by you:**
+5. **Twitter/X** — a few relevant public Myntra-related posts every 1–2 weeks
+6. **Fashion/shopping communities & Facebook Groups** — a few relevant Myntra-related threads occasionally
+
+---
+
+## Data Collection Plan
+
+**Day 1 — one-time backfill:**
+- Pull maximum available history from each automated source: Play Store (full pagination), YouTube (all comments from seed videos), Reddit (up to the free API's ~1000-results-per-query ceiling), and a first full scrape of Myntra product review pages (this becomes the starting snapshot, since product pages have no historical archive).
+- This establishes a solid starting dataset from day one instead of waiting weeks to accumulate volume.
+
+**Every week after — automated incremental runs:**
+- Same 4 scrapers re-run via a scheduled GitHub Actions workflow.
+- Each run pulls only *new* items since the last run (deduped by ID), keeping runs light and well within free quotas.
+- New data flows through classification and aggregation automatically, so the dataset — and its trend data — keeps growing across the full 20-day window.
+
+**Known limitations, stated explicitly in methodology (not hidden):**
+- Reddit's free API caps results at ~1000 per query — this bounds how far back Reddit data goes.
+- Product-page scraping has no historical archive; "past data" here means "everything live as of day 1," not true history.
+- Twitter/X and community data are manual and present-only, not backfillable.
+
+---
+
+## Pipeline Architecture
+
+**Ingestion → Filtering → Classification → Aggregation → Presentation**
+
+### 1. Ingestion
+Python scrapers per source (listed above), triggered weekly by GitHub Actions (free scheduled cron, no trial expiry risk).
+
+### 2. Storage
+Airtable or Supabase (free tier). Schema: `id, source, raw_text, date_collected, date_posted, url`. Raw text is never overwritten — all classification output is appended as linked fields. `source` is retained for methodology/debugging purposes only, not surfaced as a dashboard comparison feature.
+
+### 3. Filtering
+**Groq** (free-tier, fast inference on open models) runs a first-pass relevance filter to discard spam/off-topic entries before they consume classification quota — a deliberate cost/quality tradeoff.
+
+### 4. Classification (core "AI" layer)
+**Gemini API** (Google AI Studio free tier) tags each surviving record against the fixed taxonomy below, using structured JSON output.
+
+---
+
+## Classification Taxonomy
+### Mapped directly to the brief's questions — nothing added beyond what's needed to answer them
+
+**Foundational field** (needed to connect every other tag to the actual outcome):
+- **`purchase_outcome`** — `purchased` / `not_purchased` / `unclear`
+  Every question in the brief is really asking "what leads to purchase vs. not" — without this, no other tag can be compared against the conversion metric.
+
+**1. Why do users add products to wishlist?**
+- **`wishlist_motive`** — `liked_product` / `waiting_for_sale` / `saving_for_later` / `comparing_options` / `no_immediate_budget` / `not_stated`
+
+**2. What prevents wishlisted products from being purchased?**
+- **`purchase_blocker`** — `price_too_high` / `size_fit_doubt` / `quality_doubt` / `found_alternative` / `no_longer_needed` / `bad_reviews` / `delivery_return_concern` / `forgot` / `not_stated`
+
+**3. What uncertainties remain after identifying a liked product?**
+- **`post_selection_uncertainty`** — `fit_size` / `quality_material` / `color_accuracy` / `authenticity` / `styling_fit_for_occasion` / `none_stated`
+
+**4. What causes purchase postponement?**
+- **`purchase_postponement_reason`** — `waiting_for_discount` / `waiting_for_payday_budget` / `waiting_for_occasion` / `seeking_more_reviews` / `comparing_more_options` / `not_stated`
+
+**5. How do users compare shortlisted products?**
+- **`comparison_behavior`** — `price_comparison` / `review_rating_comparison` / `brand_comparison` / `feature_comparison` / `cross_platform_comparison` / `not_mentioned`
+
+**6. What information do users seek outside Myntra?**
+- **`external_info_sought`** — `youtube_review` / `influencer_opinion` / `friends_family_opinion` / `other_site_price_check` / `other_site_reviews` / `not_mentioned`
+
+**7. Role of fit, size, styling, price, reviews, occasion, social validation** (each a separate yes/no signal — a single entry can trigger several):
+- `fit_size_signal`, `styling_signal`, `price_signal`, `reviews_signal`, `occasion_signal`, `social_validation_signal`
+
+**8. Genuine purchase intent vs. bookmarking?**
+- **`wishlist_intent_type`** — `genuine_intent` (states plan/timeline to buy) / `bookmarking_only` (no stated intent) / `unclear`
+
+**9. How do behaviors differ across segments?**
+- **`segment_signal`** — `gender_context` / `budget_conscious` / `premium_oriented` / `first_time_shopper` / `frequent_shopper` / `not_evident`
+  Tagged only when explicitly evident in the text — never inferred or guessed.
+
+**10. What unmet needs recur across conversations?**
+- **`unmet_need`** — open short-text field (e.g. "better size guide," "video try-on," "faster returns"), aggregated separately afterward to surface recurring phrases.
+
+**Supporting field** (needed to make counts meaningful):
+- **`sentiment`** — `positive` / `negative` / `neutral`
+  Distinguishes a complaint from a compliment on the same theme (e.g. "price" appearing in "price is great" vs. "price is too high" are opposite signals).
+
+---
+
+## Aggregation
+
+Weekly rollup computes: theme counts (weekly + cumulative), week-over-week % change, representative quotes per theme.
+
+**Opportunity Score = Frequency × Severity × Trend Multiplier**
+- Frequency: raw mentions per theme per week
+- Severity (1–3): detected automatically from co-occurrence with `purchase_outcome: not_purchased` and negative `sentiment` — not manually guessed
+- Trend multiplier: rising ×1.2 / flat ×1.0 / falling ×0.8 vs. prior week's average
+
+---
+
+## Presentation (Dashboard)
+
+Airtable interface or lightweight Streamlit app, reading from the same data store. Shows ranked opportunity areas with trend over time, quote evidence, and an explicit link from each theme to wishlist→purchase conversion impact.
+
+**Finalized features (all filters/formatting on data already computed — no new pipeline components):**
+1. **Question view filter** — filter the list by which brief question it maps to (e.g. "purchase blockers only," "comparison behavior only") instead of one mixed list.
+2. **"So what" column** — one manually-written line per opportunity area translating the theme into a business implication. Written by hand during weekly review, not AI-generated.
+3. **Priority threshold flag** — themes crossing a defined opportunity score are flagged "priority," making the ranked list skimmable.
+4. **Trend arrows/sparkline per theme** — the computed week-over-week % change rendered as ↑/↓/→ or a small line chart.
+
+**Deliberately excluded:** predictive modeling, unsupervised topic clustering (would conflict with the fixed taxonomy), algorithmic segment inference, automated PDF export, real-time updating (data refreshes weekly by design), and channel/platform comparison (the underlying user problem doesn't change based on where it was posted — only tone might, and tone doesn't drive the prioritization decision).
+
+### Automation
+GitHub Actions scheduled workflow runs the full pipeline weekly, producing a timestamped, inspectable execution log as proof of real, repeated operation.
+
+---
+
+## Deliverables
+
+1. GitHub repo — scrapers, filter, classifier, aggregator, Actions workflow file
+2. `taxonomy.json` — the tagging schema above, in machine-readable form
+3. Live data store accumulating real weekly data across the project window
+4. Dashboard of ranked, trending opportunity areas with quote evidence
+5. Methodology note — sources, sample size, taxonomy rationale, tool tradeoffs, and stated scope exclusions (AJIO, Nykaa Fashion, Apple App Store — all deliberate)

@@ -1,0 +1,163 @@
+{
+  "version": "1.0.0",
+  "description": "Classification taxonomy for the AI-Powered Discovery Engine. Myntra wishlist-to-purchase behavior.",
+  "fields": {
+    "purchase_outcome": {
+      "type": "enum",
+      "values": ["purchased", "not_purchased", "unclear"],
+      "default": "unclear",
+      "question": "Foundational — connects every tag to conversion",
+      "description": "Did the user purchase the wishlisted product? Every question in the brief is really asking what leads to purchase vs. not.",
+      "skip_in_theme_explosion": false,
+      "ranked_as_opportunity": false,
+      "note": "Never skip in theme explosion — conversion mix (purchased_n, not_purchased_n, unclear_n) is required for every other theme."
+    },
+    "wishlist_motive": {
+      "type": "enum",
+      "values": ["liked_product", "waiting_for_sale", "saving_for_later", "comparing_options", "no_immediate_budget", "not_stated"],
+      "default": "not_stated",
+      "question": "1. Why do users add products to wishlist?",
+      "description": "The reason the user added a product to their wishlist.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["not_stated"],
+      "ranked_as_opportunity": true
+    },
+    "purchase_blocker": {
+      "type": "enum",
+      "values": ["price_too_high", "size_fit_doubt", "quality_doubt", "found_alternative", "no_longer_needed", "bad_reviews", "delivery_return_concern", "forgot", "not_stated"],
+      "default": "not_stated",
+      "question": "2. What prevents wishlisted products from being purchased?",
+      "description": "The primary barrier that prevented the user from purchasing a wishlisted product.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["not_stated"],
+      "ranked_as_opportunity": true
+    },
+    "post_selection_uncertainty": {
+      "type": "enum",
+      "values": ["fit_size", "quality_material", "color_accuracy", "authenticity", "styling_fit_for_occasion", "none_stated"],
+      "default": "none_stated",
+      "question": "3. What uncertainties remain after identifying a liked product?",
+      "description": "What the user is still unsure about after shortlisting a product.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["none_stated"],
+      "ranked_as_opportunity": true
+    },
+    "purchase_postponement_reason": {
+      "type": "enum",
+      "values": ["waiting_for_discount", "waiting_for_payday_budget", "waiting_for_occasion", "seeking_more_reviews", "comparing_more_options", "not_stated"],
+      "default": "not_stated",
+      "question": "4. What causes purchase postponement?",
+      "description": "Why the user delayed purchasing a product they intended to buy.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["not_stated"],
+      "ranked_as_opportunity": true
+    },
+    "comparison_behavior": {
+      "type": "enum",
+      "values": ["price_comparison", "review_rating_comparison", "brand_comparison", "feature_comparison", "cross_platform_comparison", "not_mentioned"],
+      "default": "not_mentioned",
+      "question": "5. How do users compare shortlisted products?",
+      "description": "How the user compared multiple shortlisted products before deciding.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["not_mentioned"],
+      "ranked_as_opportunity": true
+    },
+    "external_info_sought": {
+      "type": "enum",
+      "values": ["youtube_review", "influencer_opinion", "friends_family_opinion", "other_site_price_check", "other_site_reviews", "not_mentioned"],
+      "default": "not_mentioned",
+      "question": "6. What information do users seek outside Myntra?",
+      "description": "What external information the user sought before making a purchase decision.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["not_mentioned"],
+      "ranked_as_opportunity": true
+    },
+    "fit_size_signal": {
+      "type": "boolean",
+      "default": false,
+      "question": "7. Role of fit/size",
+      "description": "Whether fit or size was mentioned as a factor in the user's decision.",
+      "ranked_as_opportunity": true
+    },
+    "styling_signal": {
+      "type": "boolean",
+      "default": false,
+      "question": "7. Role of styling",
+      "description": "Whether styling was mentioned as a factor in the user's decision.",
+      "ranked_as_opportunity": true
+    },
+    "price_signal": {
+      "type": "boolean",
+      "default": false,
+      "question": "7. Role of price",
+      "description": "Whether price was mentioned as a factor in the user's decision.",
+      "ranked_as_opportunity": true
+    },
+    "reviews_signal": {
+      "type": "boolean",
+      "default": false,
+      "question": "7. Role of reviews",
+      "description": "Whether reviews were mentioned as a factor in the user's decision.",
+      "ranked_as_opportunity": true
+    },
+    "occasion_signal": {
+      "type": "boolean",
+      "default": false,
+      "question": "7. Role of occasion",
+      "description": "Whether a specific occasion was mentioned as a factor in the user's decision.",
+      "ranked_as_opportunity": true
+    },
+    "social_validation_signal": {
+      "type": "boolean",
+      "default": false,
+      "question": "7. Role of social validation",
+      "description": "Whether social validation (friends, influencers, social media) was mentioned as a factor.",
+      "ranked_as_opportunity": true
+    },
+    "wishlist_intent_type": {
+      "type": "enum",
+      "values": ["genuine_intent", "bookmarking_only", "unclear"],
+      "default": "unclear",
+      "question": "8. Genuine purchase intent vs. bookmarking?",
+      "description": "Whether the user's wishlist behavior reflects genuine intent to buy or just bookmarking.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["unclear"],
+      "ranked_as_opportunity": true
+    },
+    "segment_signal": {
+      "type": "enum",
+      "values": ["gender_context", "budget_conscious", "premium_oriented", "first_time_shopper", "frequent_shopper", "not_evident"],
+      "default": "not_evident",
+      "question": "9. How do behaviors differ across segments?",
+      "description": "User segment signals — tagged ONLY when explicitly evident in the text. Never inferred.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["not_evident"],
+      "ranked_as_opportunity": true
+    },
+    "unmet_need": {
+      "type": "open_text",
+      "default": "",
+      "question": "10. What unmet needs recur across conversations?",
+      "description": "A short phrase describing an unmet need (e.g. 'better size guide', 'video try-on'). Aggregated later to surface recurring phrases.",
+      "ranked_as_opportunity": true
+    },
+    "sentiment": {
+      "type": "enum",
+      "values": ["positive", "negative", "neutral"],
+      "default": "neutral",
+      "question": "Supporting — needed to make counts meaningful",
+      "description": "Overall sentiment of the text. Distinguishes complaints from compliments on the same theme. Feeds severity auto-detection.",
+      "skip_in_theme_explosion": true,
+      "skip_values": ["positive", "negative", "neutral"],
+      "ranked_as_opportunity": false,
+      "note": "Sentiment is never a ranked theme. It only feeds severity calculation via co-occurrence with purchase_outcome."
+    }
+  },
+  "skip_values_global": ["not_stated", "not_mentioned", "none_stated", "unclear", "not_evident"],
+  "notes": {
+    "immutable_rule": "Do not add fields or enum values beyond this set.",
+    "segment_rule": "segment_signal is evidence-only — tag only when explicitly stated in the text, never infer.",
+    "purchase_outcome_rule": "purchase_outcome is never skipped in theme explosion — conversion mix is required for every other theme.",
+    "sentiment_rule": "sentiment is not a ranked theme — it only feeds severity."
+  }
+}
