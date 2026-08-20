@@ -147,19 +147,125 @@ preset_questions = [
     "What unmet needs emerge consistently across user conversations?"
 ]
 
-# Inject custom JS for animated placeholder
-js_questions = [f'Search "{q}"' for q in preset_questions]
+# Inject custom JS and CSS for animated placeholder and dropdown menu
+js_questions = preset_questions
 js_code = f"""
+<style>
+/* Streamlit iframe takes up space if we don't hide it properly. We use height=0 in components.html, 
+   but we inject styles into the parent window. */
+</style>
 <script>
-const placeholders = {json.dumps(js_questions)};
+// We need to inject styles into the parent document since this script runs in an iframe
+const parentDoc = window.parent.document;
+if (!parentDoc.getElementById('custom-chat-styles')) {{
+    const style = parentDoc.createElement('style');
+    style.id = 'custom-chat-styles';
+    style.innerHTML = `
+        .custom-dropdown {{
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #1e1e27;
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 999999;
+            display: none;
+            margin-bottom: 5px;
+        }}
+        .custom-dropdown.show {{
+            display: block;
+        }}
+        .dropdown-item {{
+            padding: 12px 16px;
+            cursor: pointer;
+            color: #e0e0e0;
+            font-size: 14px;
+            border-bottom: 1px solid #2d2d3a;
+            transition: background 0.2s;
+        }}
+        .dropdown-item:last-child {{
+            border-bottom: none;
+        }}
+        .dropdown-item:hover {{
+            background-color: #333342;
+            color: #fff;
+        }}
+    `;
+    parentDoc.head.appendChild(style);
+}}
+
+const questions = {json.dumps(js_questions)};
+const animatedPlaceholders = {json.dumps([f'Search "{{q}}"' for q in preset_questions])};
+
+// 1. Placeholder Animation Logic
 let i = 0;
 setInterval(() => {{
-    const input = window.parent.document.querySelector('.stChatInput textarea');
-    if (input && window.parent.document.activeElement !== input) {{
-        input.setAttribute('placeholder', placeholders[i]);
-        i = (i + 1) % placeholders.length;
+    const input = parentDoc.querySelector('[data-testid="stChatInputTextArea"]');
+    if (input && parentDoc.activeElement !== input) {{
+        input.setAttribute('placeholder', animatedPlaceholders[i]);
+        i = (i + 1) % animatedPlaceholders.length;
     }}
-}}, 1000);
+}}, 2500);
+
+// 2. Dropdown Logic
+// Wait for the chat input to exist in the DOM
+const observer = new MutationObserver(() => {{
+    const chatContainer = parentDoc.querySelector('[data-testid="stChatInput"]');
+    const input = parentDoc.querySelector('[data-testid="stChatInputTextArea"]');
+    const submitBtn = parentDoc.querySelector('[data-testid="stChatInputSubmitButton"]');
+    
+    if (chatContainer && input && submitBtn && !parentDoc.getElementById('chat-dropdown')) {{
+        // Chat container needs position relative for absolute positioning of dropdown
+        chatContainer.style.position = 'relative';
+        
+        // Create Dropdown DOM
+        const dropdown = parentDoc.createElement('div');
+        dropdown.id = 'chat-dropdown';
+        dropdown.className = 'custom-dropdown';
+        
+        questions.forEach(q => {{
+            const item = parentDoc.createElement('div');
+            item.className = 'dropdown-item';
+            item.textContent = q;
+            
+            // Handle Item Click
+            item.onmousedown = (e) => {{
+                e.preventDefault(); // Prevent input blur
+                
+                // 1. Set React value via native setter hack
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                nativeInputValueSetter.call(input, q);
+                
+                // 2. Dispatch input event for React
+                const ev2 = new Event('input', {{ bubbles: true}});
+                input.dispatchEvent(ev2);
+                
+                // 3. Close dropdown
+                dropdown.classList.remove('show');
+                
+                // 4. Click submit
+                setTimeout(() => {{ submitBtn.click(); }}, 50);
+            }};
+            dropdown.appendChild(item);
+        }});
+        
+        chatContainer.appendChild(dropdown);
+        
+        // Handle Focus/Blur to show/hide
+        input.addEventListener('focus', () => {{
+            dropdown.classList.add('show');
+        }});
+        input.addEventListener('blur', () => {{
+            setTimeout(() => dropdown.classList.remove('show'), 150);
+        }});
+    }}
+}});
+
+observer.observe(parentDoc.body, {{ childList: true, subtree: true }});
 </script>
 """
 import streamlit.components.v1 as components
@@ -168,19 +274,6 @@ components.html(js_code, height=0, width=0)
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-# Layout for suggested questions
-if len(st.session_state.messages) == 0:
-    st.markdown("### Suggested Questions")
-    cols = st.columns(2)
-    for idx, q in enumerate(preset_questions[:4]): # Show first 4
-        with cols[idx % 2]:
-            if st.button(q, use_container_width=True, key=f"btn_{idx}"):
-                st.session_state.messages.append({"role": "user", "content": q})
-                with st.spinner("Analyzing data..."):
-                    response = ask_the_engine(q, df_board)
-                    st.session_state.messages.append({"role": "assistant", "content": response})
-                st.rerun()
 
 # Display chat messages from history on app rerun
 for message in st.session_state.messages:
