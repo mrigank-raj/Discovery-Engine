@@ -102,35 +102,7 @@ with st.spinner("Synthesizing this week's data..."):
 
 st.divider()
 
-# ---------------------------------------------------------
-# Sidebar Controls
-# ---------------------------------------------------------
-st.sidebar.header("Controls")
 
-time_toggle = st.sidebar.radio(
-    "Time Period",
-    options=["This Week", "All Time (Cumulative)"],
-    index=0
-)
-
-filter_question = st.sidebar.selectbox(
-    "View by Question / Topic",
-    options=[
-        "All questions",
-        "What prevents a purchase?",
-        "Why do users wishlist?",
-        "What uncertainties remain?",
-        "What causes purchase postponement?",
-        "How do users compare products?",
-        "What info do users seek elsewhere?",
-        "Is wishlist a bookmark or a cart?",
-        "Unmet Needs",
-        "User Segments",
-        "Fit and Size Signals",
-        "Price Signals",
-        "Quality Signals"
-    ]
-)
 
 # Map human-readable questions to fields
 question_map = {
@@ -148,30 +120,7 @@ question_map = {
     "Quality Signals": "quality_signal"
 }
 
-# ---------------------------------------------------------
-# Data Processing & Filtering
-# ---------------------------------------------------------
 df_filtered = df_board.copy()
-
-# Filter by question
-if filter_question != "All questions":
-    target_field = question_map[filter_question]
-    df_filtered = df_filtered[df_filtered["theme_field"] == target_field]
-
-# Adjust for All Time vs This Week
-if time_toggle == "All Time (Cumulative)":
-    # Use cumulative count
-    df_filtered["display_count"] = df_filtered["cumulative_count"]
-    # Re-calculate score: cumulative_count * severity
-    df_filtered["display_score"] = df_filtered["display_count"] * df_filtered["severity"]
-    # Re-rank
-    df_filtered = df_filtered.sort_values(by="display_score", ascending=False).reset_index(drop=True)
-    df_filtered["display_rank"] = df_filtered.index + 1
-else:
-    df_filtered["display_count"] = df_filtered["frequency"]
-    df_filtered["display_score"] = df_filtered["score"]
-    df_filtered["display_rank"] = df_filtered["rank"]
-    df_filtered = df_filtered.sort_values(by="display_rank", ascending=True).reset_index(drop=True)
 
 # ---------------------------------------------------------
 # Dashboard Body (Removed Opportunity Areas per request)
@@ -184,9 +133,53 @@ st.divider()
 st.header("💬 Ask the Discovery Engine")
 st.caption("Ask specific questions about user behaviors, segments, or product outcomes.")
 
+preset_questions = [
+    "Why do users add fashion products to their wishlist?",
+    "What prevents wishlisted products from eventually being purchased?",
+    "What uncertainties remain after users have identified a product they like?",
+    "What causes users to postpone a purchase?",
+    "How do users compare multiple shortlisted products?",
+    "What information do users seek outside Myntra/AJIO before purchasing?",
+    "What role do fit, size, styling, price, reviews, occasion and social validation play?",
+    "When do users use the wishlist as genuine purchase intent versus simply as a bookmarking mechanism?",
+    "How do these behaviors differ across user segments?",
+    "What unmet needs emerge consistently across user conversations?"
+]
+
+# Inject custom JS for animated placeholder
+js_questions = [f'Search "{q}"' for q in preset_questions]
+js_code = f"""
+<script>
+const placeholders = {json.dumps(js_questions)};
+let i = 0;
+setInterval(() => {{
+    const input = window.parent.document.querySelector('.stChatInput textarea');
+    if (input && window.parent.document.activeElement !== input) {{
+        input.setAttribute('placeholder', placeholders[i]);
+        i = (i + 1) % placeholders.length;
+    }}
+}}, 1000);
+</script>
+"""
+import streamlit.components.v1 as components
+components.html(js_code, height=0, width=0)
+
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+# Layout for suggested questions
+if len(st.session_state.messages) == 0:
+    st.markdown("### Suggested Questions")
+    cols = st.columns(2)
+    for idx, q in enumerate(preset_questions[:4]): # Show first 4
+        with cols[idx % 2]:
+            if st.button(q, use_container_width=True, key=f"btn_{idx}"):
+                st.session_state.messages.append({"role": "user", "content": q})
+                with st.spinner("Analyzing data..."):
+                    response = ask_the_engine(q, df_board)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                st.rerun()
 
 # Display chat messages from history on app rerun
 for message in st.session_state.messages:
@@ -194,7 +187,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # React to user input
-if prompt := st.chat_input("E.g., What is the biggest blocker for users buying fashion on Myntra?"):
+if prompt := st.chat_input("Ask a question..."):
     # Display user message in chat message container
     st.chat_message("user").markdown(prompt)
     # Add user message to chat history
