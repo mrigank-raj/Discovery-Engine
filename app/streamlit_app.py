@@ -97,14 +97,21 @@ time_toggle = st.sidebar.radio(
 )
 
 filter_question = st.sidebar.selectbox(
-    "View by Question",
+    "View by Question / Topic",
     options=[
         "All questions",
         "What prevents a purchase?",
         "Why do users wishlist?",
         "What uncertainties remain?",
+        "What causes purchase postponement?",
         "How do users compare products?",
-        "What info do users seek elsewhere?"
+        "What info do users seek elsewhere?",
+        "Is wishlist a bookmark or a cart?",
+        "Unmet Needs",
+        "User Segments",
+        "Fit and Size Signals",
+        "Price Signals",
+        "Quality Signals"
     ]
 )
 
@@ -113,8 +120,15 @@ question_map = {
     "What prevents a purchase?": "purchase_blocker",
     "Why do users wishlist?": "wishlist_motive",
     "What uncertainties remain?": "post_selection_uncertainty",
+    "What causes purchase postponement?": "purchase_postponement_reason",
     "How do users compare products?": "comparison_behavior",
-    "What info do users seek elsewhere?": "external_info_sought"
+    "What info do users seek elsewhere?": "external_info_sought",
+    "Is wishlist a bookmark or a cart?": "wishlist_intent_type",
+    "Unmet Needs": "unmet_need",
+    "User Segments": "segment_signal",
+    "Fit and Size Signals": "fit_size_signal",
+    "Price Signals": "price_signal",
+    "Quality Signals": "quality_signal"
 }
 
 # ---------------------------------------------------------
