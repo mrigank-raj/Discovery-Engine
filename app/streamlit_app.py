@@ -167,18 +167,18 @@ if (!parentDoc.getElementById('custom-chat-styles')) {{
     style.innerHTML = `
         .custom-dropdown {{
             position: absolute;
-            bottom: 100%;
+            top: 100%;
             left: 0;
             width: 100%;
             background-color: #1e1e27;
             border: 1px solid #333;
             border-radius: 8px;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             max-height: 300px;
             overflow-y: auto;
             z-index: 999999;
             display: none;
-            margin-bottom: 5px;
+            margin-top: 5px;
         }}
         .custom-dropdown.show {{
             display: block;
