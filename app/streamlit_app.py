@@ -216,13 +216,16 @@ setInterval(() => {{
 }}, 2500);
 
 // 2. Dropdown Logic
-// Wait for the chat input to exist in the DOM
-const observer = new MutationObserver(() => {{
+function initDropdown() {{
+    if (parentDoc.getElementById('chat-dropdown')) return;
+    
     const chatContainer = parentDoc.querySelector('[data-testid="stChatInput"]');
     const input = parentDoc.querySelector('[data-testid="stChatInputTextArea"]');
-    const submitBtn = parentDoc.querySelector('[data-testid="stChatInputSubmitButton"]');
     
-    if (chatContainer && input && submitBtn && !parentDoc.getElementById('chat-dropdown')) {{
+    if (chatContainer && input) {{
+        // Find the submit button inside the chat container
+        const submitBtn = chatContainer.querySelector('button');
+        
         // Chat container needs position relative for absolute positioning of dropdown
         chatContainer.style.position = 'relative';
         
@@ -252,7 +255,9 @@ const observer = new MutationObserver(() => {{
                 dropdown.classList.remove('show');
                 
                 // 4. Click submit
-                setTimeout(() => {{ submitBtn.click(); }}, 50);
+                if (submitBtn) {{
+                    setTimeout(() => {{ submitBtn.click(); }}, 50);
+                }}
             }};
             dropdown.appendChild(item);
         }});
@@ -264,11 +269,16 @@ const observer = new MutationObserver(() => {{
             dropdown.classList.add('show');
         }});
         input.addEventListener('blur', () => {{
-            setTimeout(() => dropdown.classList.remove('show'), 150);
+            setTimeout(() => dropdown.classList.remove('show'), 200);
         }});
     }}
-}});
+}}
 
+// Run immediately in case DOM is already ready
+initDropdown();
+
+// Fallback to observer if DOM loads later
+const observer = new MutationObserver(initDropdown);
 observer.observe(parentDoc.body, {{ childList: true, subtree: true }});
 </script>
 """
