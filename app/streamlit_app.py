@@ -147,8 +147,12 @@ preset_questions = [
     "What unmet needs emerge consistently across user conversations?"
 ]
 
+# Define JSON objects outside the f-string to avoid escaping bugs
+animated_placeholders = [f'Search "{q}"' for q in preset_questions]
+questions_json = json.dumps(preset_questions)
+placeholders_json = json.dumps(animated_placeholders)
+
 # Inject custom JS and CSS for animated placeholder and dropdown menu
-js_questions = preset_questions
 js_code = f"""
 <style>
 /* Streamlit iframe takes up space if we don't hide it properly. We use height=0 in components.html, 
@@ -198,8 +202,8 @@ if (!parentDoc.getElementById('custom-chat-styles')) {{
     parentDoc.head.appendChild(style);
 }}
 
-const questions = {json.dumps(js_questions)};
-const animatedPlaceholders = {json.dumps([f'Search "{{q}}"' for q in preset_questions])};
+const questions = {questions_json};
+const animatedPlaceholders = {placeholders_json};
 
 // 1. Placeholder Animation Logic
 let i = 0;
