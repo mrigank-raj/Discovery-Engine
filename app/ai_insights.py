@@ -41,25 +41,28 @@ def generate_executive_synthesis(df_board, df_quotes, week_start):
         })
 
     prompt = f"""
-You are a Staff Product Manager at Myntra, presenting a weekly Discovery Engine synthesis to your leadership team.
-Your goal is to save PMs time by providing deeply analytical, trustable, and actionable insights based on qualitative user feedback.
+You are a Staff Product Manager on the Growth Team at Myntra, presenting a weekly Discovery Engine synthesis to your leadership team.
+Your company’s strategic goal is to: "Increase the percentage of users who purchase at least one item from their wishlist within 30 days of adding it."
+Improving this metric increases purchase frequency, improves monetization from existing users, and extracts greater value from high-intent demand.
 
 Here is the raw data for the highest-scoring opportunity areas discovered this week ({week_start}):
 {json.dumps(context_data, indent=2)}
 
 TASK:
-Write a concise, high-impact 2-3 paragraph Executive Synthesis. 
-You MUST explicitly break down the core business metric: **Wishlist → Purchase Conversion**.
+Write a concise, high-impact 3-4 paragraph Executive Synthesis tailored specifically for Growth PMs. 
+You MUST explicitly break down the core business metric: **Wishlist → Purchase Conversion (within 30 days)**.
+
 Decompose this metric into:
 1. The **User Behaviors** that are currently causing friction or driving intent (based on the data).
-2. The specific **Product Outcomes** that Myntra PMs need to drive in order to unblock that conversion and improve the metric.
+2. The specific **Product Outcomes** that Growth PMs need to drive in order to unblock that conversion and improve the metric.
+3. **Actionable User Research Hypotheses**: Provide 2-3 specific, testable hypotheses derived from these insights that a PM could immediately take to a User Research team to validate.
 
-Do NOT just list the data. Synthesize it. Tell the PMs exactly what the data means for the business and what product areas hold the highest potential for impact this week.
+Do NOT just list the data. Synthesize it. Tell the Growth PMs exactly what the data means for the business and what product areas hold the highest potential for impact this week.
 Format with markdown for readability (bolding key terms). Do not use greeting/closing phrases, just output the synthesis.
 """
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -100,7 +103,7 @@ Answer the question professionally, directly referencing the dataset where possi
 """
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
