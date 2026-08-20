@@ -14,6 +14,8 @@ import sys
 from config.settings import validate_pipeline_env
 from db.supabase_client import close_pipeline_run, insert_pipeline_run
 from ingest.play_store import ingest_play_store
+from ingest.reddit import ingest_reddit
+from ingest.youtube import ingest_youtube
 from filter.groq_filter import run_groq_filter
 from classify.gemini_classify import run_gemini_classify
 
@@ -69,7 +71,29 @@ def run_pipeline(mode: str) -> None:
             overall_status = "partial"
             error_summary.append(f"Play Store failed: {e}")
 
-        # (Other adapters will go here in Phase 5)
+        # 1B. Reddit
+        try:
+            reddit_counts = ingest_reddit(mode, run_id)
+            counts["ingest"]["reddit"] = reddit_counts
+            if reddit_counts.get("error", 0) > 0:
+                overall_status = "partial"
+                error_summary.append("Reddit ingest encountered errors.")
+        except Exception as e:
+            logger.exception("Reddit ingest failed entirely.")
+            overall_status = "partial"
+            error_summary.append(f"Reddit failed: {e}")
+
+        # 1C. YouTube
+        try:
+            youtube_counts = ingest_youtube(mode, run_id)
+            counts["ingest"]["youtube"] = youtube_counts
+            if youtube_counts.get("error", 0) > 0:
+                overall_status = "partial"
+                error_summary.append("YouTube ingest encountered errors.")
+        except Exception as e:
+            logger.exception("YouTube ingest failed entirely.")
+            overall_status = "partial"
+            error_summary.append(f"YouTube failed: {e}")
 
         # ---------------------------------------------------------
         # STAGE 2: FILTER & CLASSIFY (Phase 2)
