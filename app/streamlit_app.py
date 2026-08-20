@@ -174,82 +174,8 @@ else:
     df_filtered = df_filtered.sort_values(by="display_rank", ascending=True).reset_index(drop=True)
 
 # ---------------------------------------------------------
-# Dashboard Body
+# Dashboard Body (Removed Opportunity Areas per request)
 # ---------------------------------------------------------
-
-st.subheader(f"Opportunity Areas ({len(df_filtered)})")
-
-if df_filtered.empty:
-    st.info("No themes found for this filter.")
-
-for _, row in df_filtered.iterrows():
-    theme_key = row["theme_key"]
-    theme_field = str(row.get("theme_field", "")).replace("_", " ").title()
-    theme_value = str(row.get("theme_value", "")).replace("_", " ").title()
-    human_theme = f"{theme_field}: {theme_value}"
-    
-    # Trend arrow
-    if row["trend"] == "rising":
-        trend_arrow = "↑"
-        trend_color = "red"
-    elif row["trend"] == "falling":
-        trend_arrow = "↓"
-        trend_color = "green"
-    else:
-        trend_arrow = "→"
-        trend_color = "gray"
-        
-    with st.container():
-        st.markdown(f"""
-        <div class="opp-card">
-            <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                <h3>#{int(row['display_rank'])} {human_theme} {'<span class="priority-badge">PRIORITY</span>' if row.get('priority') and time_toggle == 'This Week' else ''}</h3>
-                <div style="text-align: right;">
-                    <span style="font-size: 1.2em; font-weight: bold; color: {trend_color};">{trend_arrow}</span>
-                    <span style="margin-left: 10px; font-weight: 500;">Score: {row['display_score']:.1f}</span>
-                </div>
-            </div>
-            <div style="color: #6c757d; margin-bottom: 16px;">
-                <strong>Mentions:</strong> {int(row['display_count'])} | 
-                <strong>Severity:</strong> {row['severity']:.1f}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2 = st.columns([3, 2])
-        
-        with col1:
-            st.markdown("**Representative Quotes**")
-            # Fetch quotes for this theme
-            theme_quotes = df_quotes[df_quotes["theme_key"] == theme_key]
-            if not theme_quotes.empty:
-                for idx, q_row in theme_quotes.head(3).iterrows():
-                    source = q_row.get("source", "Unknown")
-                    st.info(f"*{q_row['raw_text']}* — ({source})")
-            else:
-                st.write("No quotes available.")
-                
-        with col2:
-            st.markdown("**'So What' Analysis**")
-            # Editable note field
-            note_key = f"note_{theme_key}"
-            current_note = row.get("so_what", "")
-            
-            # Using a form to avoid rerun on every keystroke
-            with st.form(key=f"form_{theme_key}"):
-                new_note = st.text_area("Product Manager Notes:", value=current_note, key=note_key, height=150)
-                submit_button = st.form_submit_button(label='Save Note')
-                
-                if submit_button:
-                    try:
-                        upsert_opportunity_note(theme_key, new_note)
-                        st.success("Note saved!")
-                        # Clear cache so it reloads on next interaction
-                        st.cache_data.clear()
-                    except Exception as e:
-                        st.error(f"Failed to save note: {e}")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # Guarded AI Chat Interface
