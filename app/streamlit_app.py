@@ -5,6 +5,7 @@ Visualizes the weekly opportunity areas and allows PMs to add 'So What' notes.
 
 import os
 import sys
+import json
 import streamlit as st
 import pandas as pd
 from datetime import datetime
