@@ -18,6 +18,7 @@ from db.supabase_client import (
     get_last_pipeline_run,
     upsert_opportunity_note
 )
+from app.ai_insights import generate_executive_synthesis, ask_the_engine
 
 st.set_page_config(
     page_title="Myntra Discovery Engine",
@@ -82,6 +83,22 @@ week_start = df_board["week_start"].iloc[0]
 # Display run metadata
 if last_run:
     st.caption(f"Data as of Week: **{week_start}** | Last Pipeline Run: {last_run.get('finished_at', 'In Progress')} ({last_run.get('status', 'N/A')})")
+
+st.divider()
+
+# ---------------------------------------------------------
+# AI Executive Synthesis
+# ---------------------------------------------------------
+st.markdown("## 🧠 AI Executive Synthesis")
+st.markdown("*Decomposing Wishlist → Purchase Conversion*")
+
+@st.cache_data(ttl=3600) # Cache the synthesis for 1 hour to save API tokens
+def get_cached_synthesis(week, _df_board, _df_quotes):
+    return generate_executive_synthesis(_df_board, _df_quotes, week)
+
+with st.spinner("Synthesizing this week's data..."):
+    synthesis = get_cached_synthesis(week_start, df_board, df_quotes)
+    st.info(synthesis)
 
 st.divider()
 
@@ -233,3 +250,34 @@ for _, row in df_filtered.iterrows():
                         st.error(f"Failed to save note: {e}")
         
         st.markdown("<br>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# Guarded AI Chat Interface
+# ---------------------------------------------------------
+st.divider()
+st.header("💬 Ask the Discovery Engine")
+st.caption("Ask specific questions about user behaviors, segments, or product outcomes.")
+
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# React to user input
+if prompt := st.chat_input("E.g., What is the biggest blocker for users buying fashion on Myntra?"):
+    # Display user message in chat message container
+    st.chat_message("user").markdown(prompt)
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # Call AI
+    with st.chat_message("assistant"):
+        with st.spinner("Analyzing data..."):
+            response = ask_the_engine(prompt, df_board)
+            st.markdown(response)
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
