@@ -49,16 +49,22 @@ Here is the raw data for the highest-scoring opportunity areas discovered this w
 {json.dumps(context_data, indent=2)}
 
 TASK:
-Write a concise, high-impact 3-4 paragraph Executive Synthesis tailored specifically for Growth PMs. 
-You MUST explicitly break down the core business metric: **Wishlist → Purchase Conversion (within 30 days)**.
+Write a concise, high-impact Executive Synthesis tailored specifically for Growth PMs. 
+You MUST format your output as 3-4 distinct "Insight Cards" rather than a wall of text.
+For each insight, provide:
+- A bold, punchy title (e.g., **01 — Delivery uncertainty is a recurring purchase barrier**)
+- A short 1-2 sentence explanation.
+- The relevant segment or signal strength if applicable.
+
+After the insight cards, you MUST explicitly break down the core business metric: **Wishlist → Purchase Conversion (within 30 days)**.
 
 Decompose this metric into:
 1. The **User Behaviors** that are currently causing friction or driving intent (based on the data).
 2. The specific **Product Outcomes** that Growth PMs need to drive in order to unblock that conversion and improve the metric.
 3. **Actionable User Research Hypotheses**: Provide 2-3 specific, testable hypotheses derived from these insights that a PM could immediately take to a User Research team to validate.
 
-Do NOT just list the data. Synthesize it. Tell the Growth PMs exactly what the data means for the business and what product areas hold the highest potential for impact this week.
-Format with markdown for readability (bolding key terms). Do not use greeting/closing phrases, just output the synthesis.
+Do NOT just list the data. Synthesize it. Tell the Growth PMs exactly what the data means for the business.
+Format with clean markdown for readability. Do not use greeting/closing phrases, just output the structured synthesis.
 """
 
     try:

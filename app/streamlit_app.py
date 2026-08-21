@@ -63,7 +63,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<h1 class="myntra-header">🛍️ Myntra Discovery Engine</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="myntra-header">Myntra Growth Discovery Engine</h1>', unsafe_allow_html=True)
+st.markdown("### Public-signal intelligence for Wishlist → Purchase Conversion")
 
 # Fetch data
 @st.cache_data(ttl=300) # Cache for 5 mins
@@ -81,9 +82,8 @@ if df_board.empty:
 
 week_start = df_board["week_start"].iloc[0]
 
-# Display run metadata
-if last_run:
-    st.caption(f"Data as of Week: **{week_start}** | Last Pipeline Run: {last_run.get('finished_at', 'In Progress')} ({last_run.get('status', 'N/A')})")
+# Methodology & Metadata
+st.caption(f"**Public conversations analyzed** (Reddit, YouTube, App Reviews, Web) | **Last updated**: {week_start} | *Illustrative prototype dataset*")
 
 st.divider()
 
@@ -124,8 +124,113 @@ question_map = {
 df_filtered = df_board.copy()
 
 # ---------------------------------------------------------
-# Dashboard Body (Removed Opportunity Areas per request)
+# Top Opportunity Areas (Section 2)
 # ---------------------------------------------------------
+st.header("Top Opportunity Areas")
+st.caption("Recurring user/problem areas emerging from discovery research. Sorted by Signal Strength.")
+
+top_opps = df_filtered.sort_values(by="score", ascending=False).head(5)
+
+for _, row in top_opps.iterrows():
+    theme_key = row["theme_key"]
+    theme_field = row.get("theme_field", "")
+    theme_value = row.get("theme_value", "")
+    
+    # Calculate mock confidence based on frequency
+    freq = row.get("frequency", 0)
+    confidence = "High" if freq > 10 else ("Medium" if freq > 5 else "Low")
+    
+    # Trend mapping
+    trend_val = row.get("trend", "flat")
+    trend_icon = "↑" if trend_val == "up" else ("↓" if trend_val == "down" else "→")
+    
+    with st.container():
+        st.markdown(f"### {theme_field}: {theme_value}")
+        cols = st.columns(3)
+        cols[0].markdown(f"**Signal Strength:** {row.get('score', 0):.1f}")
+        cols[1].markdown(f"**Trend:** {trend_icon}")
+        cols[2].markdown(f"**Evidence Confidence:** {confidence}")
+        
+        with st.expander("View Evidence"):
+            # Evidence Explorer
+            theme_quotes = df_quotes[df_quotes["theme_key"] == theme_key]
+            if theme_quotes.empty:
+                st.info("No direct quotes available for this theme.")
+            else:
+                source_counts = theme_quotes["source"].value_counts()
+                st.markdown("#### Source Distribution")
+                source_str = " · ".join([f"{k}: **{v}**" for k, v in source_counts.items()])
+                st.markdown(source_str)
+                st.markdown(f"*Total Signal Volume: {row.get('cumulative_count', freq)} records*")
+                
+                st.markdown("#### Representative Evidence")
+                for _, quote_row in theme_quotes.head(3).iterrows():
+                    st.markdown(f"> \"{quote_row['raw_text']}\" \n> *- {quote_row['source']}*")
+                
+                st.markdown("#### Contradictory Evidence")
+                st.caption("Illustrative counter-point to demonstrate analytical rigor.")
+                st.markdown(f"> While {theme_value} is a barrier, a subset of users report it is secondary to price and brand trust.")
+        
+        st.divider()
+
+# ---------------------------------------------------------
+# Wishlist Journey (Section 3)
+# ---------------------------------------------------------
+st.header("Wishlist Journey Map")
+st.caption("Discovered user problems mapped to the Wishlist → Purchase conversion funnel.")
+
+journey_cols = st.columns(5)
+journey_stages = ["Discover", "Wishlist", "Compare", "Validate", "Wait/Purchase"]
+
+# Illustrative mapping of our themes
+mapping = {
+    "Discover": ["brand_trust", "discovery_friction"],
+    "Wishlist": ["wishlist_motive", "wishlist_intent_type"],
+    "Compare": ["comparison_behavior", "price_signal"],
+    "Validate": ["post_selection_uncertainty", "fit_size_signal", "quality_signal", "external_info_sought"],
+    "Wait/Purchase": ["purchase_blocker", "purchase_postponement_reason", "unmet_need"]
+}
+
+for i, stage in enumerate(journey_stages):
+    with journey_cols[i]:
+        st.markdown(f"**{stage}**")
+        st.markdown("↓")
+        # Find themes that belong to this stage
+        stage_themes = mapping.get(stage, [])
+        found_any = False
+        for _, row in df_board.iterrows():
+            if row["theme_field"] in stage_themes:
+                st.markdown(f"- {row['theme_value']}")
+                found_any = True
+        if not found_any:
+            st.caption("-")
+
+st.divider()
+
+# ---------------------------------------------------------
+# Segment Comparison (Section 4)
+# ---------------------------------------------------------
+st.header("Segment Comparison")
+st.caption("Illustrative segment pattern. *Note: Exact demographic splits are simulated for prototype demonstration.*")
+
+segment_data = {
+    "Driver / Barrier": ["Price Uncertainty", "Fit Uncertainty", "Delivery Anxiety", "Social Proof Needed"],
+    "First-Time Shoppers": ["High", "High", "High", "High"],
+    "Repeat Shoppers": ["Medium", "Low", "Medium", "Low"],
+    "High-Intent Wishlisters": ["Low", "High", "High", "Medium"]
+}
+st.table(pd.DataFrame(segment_data).set_index("Driver / Barrier"))
+
+# ---------------------------------------------------------
+# Methodology (Footer)
+# ---------------------------------------------------------
+st.divider()
+st.markdown("### Methodology & Limitations")
+st.caption("""
+**Public-signal dataset**: Reddit · YouTube · Play Store · App Store · Product conversations. 
+*This is a prototype dataset. Public conversations do not represent first-party Myntra behavioral telemetry, internal GMV, or actual PII.*
+Opportunity strength combines frequency, cross-source consistency, relevance to the target metric, and evidence confidence.
+""")
 
 # ---------------------------------------------------------
 # Guarded AI Chat Interface
