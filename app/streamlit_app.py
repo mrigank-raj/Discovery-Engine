@@ -121,7 +121,7 @@ question_map = {
     "Quality Signals": "quality_signal"
 }
 
-df_filtered = df_board.copy()
+df_filtered = df_board[df_board["theme_value"] != "none"].copy()
 
 # ---------------------------------------------------------
 # Top Opportunity Areas (Section 2)
@@ -145,7 +145,8 @@ for _, row in top_opps.iterrows():
     trend_icon = "↑" if trend_val == "up" else ("↓" if trend_val == "down" else "→")
     
     with st.container():
-        st.markdown(f"### {theme_field}: {theme_value}")
+        st.markdown(f"### {str(theme_value).replace('_', ' ').title()}")
+        st.caption(f"**Category:** {str(theme_field).replace('_', ' ').title()}")
         cols = st.columns(3)
         cols[0].markdown(f"**Signal Strength:** {row.get('score', 0):.1f}")
         cols[1].markdown(f"**Trend:** {trend_icon}")
@@ -159,17 +160,17 @@ for _, row in top_opps.iterrows():
             else:
                 source_counts = theme_quotes["source"].value_counts()
                 st.markdown("#### Source Distribution")
-                source_str = " · ".join([f"{k}: **{v}**" for k, v in source_counts.items()])
+                source_str = " · ".join([f"{str(k).replace('_', ' ').title()}: **{v}**" for k, v in source_counts.items()])
                 st.markdown(source_str)
                 st.markdown(f"*Total Signal Volume: {row.get('cumulative_count', freq)} records*")
                 
                 st.markdown("#### Representative Evidence")
                 for _, quote_row in theme_quotes.head(3).iterrows():
-                    st.markdown(f"> \"{quote_row['raw_text']}\" \n> *- {quote_row['source']}*")
+                    st.markdown(f"> \"{quote_row['raw_text']}\" \n> *- {str(quote_row['source']).replace('_', ' ').title()}*")
                 
                 st.markdown("#### Contradictory Evidence")
                 st.caption("Illustrative counter-point to demonstrate analytical rigor.")
-                st.markdown(f"> While {theme_value} is a barrier, a subset of users report it is secondary to price and brand trust.")
+                st.markdown(f"> While '{str(theme_value).replace('_', ' ').title()}' is a barrier, a subset of users report it is secondary to price and brand trust.")
         
         st.divider()
 
@@ -198,9 +199,9 @@ for i, stage in enumerate(journey_stages):
         # Find themes that belong to this stage
         stage_themes = mapping.get(stage, [])
         found_any = False
-        for _, row in df_board.iterrows():
+        for _, row in df_filtered.iterrows():
             if row["theme_field"] in stage_themes:
-                st.markdown(f"- {row['theme_value']}")
+                st.markdown(f"- {str(row['theme_value']).replace('_', ' ').title()}")
                 found_any = True
         if not found_any:
             st.caption("-")
