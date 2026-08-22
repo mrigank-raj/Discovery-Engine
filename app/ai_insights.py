@@ -31,7 +31,7 @@ def generate_with_fallback(prompt: str) -> str:
         try:
             client = Groq(api_key=GROQ_API_KEY)
             response = client.chat.completions.create(
-                model="llama3-70b-8192",
+                model="llama-3.1-70b-versatile",
                 messages=[
                     {"role": "system", "content": "You are a senior PM assistant."},
                     {"role": "user", "content": prompt}
