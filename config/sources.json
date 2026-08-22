@@ -5,13 +5,26 @@
     "language": "en"
   },
   "reddit": {
-    "subreddits": ["IndianFashionAddicts", "india"],
+    "subreddits": [
+      "IndianFashionAddicts",
+      "india",
+      "femalefashionadvice",
+      "malefashionadvice"
+    ],
     "search_queries": [
-      "Myntra",
-      "Myntra wishlist",
-      "Myntra size chart",
-      "Myntra return",
-      "Myntra vs"
+      "\"should I buy this or wait\"",
+      "\"still thinking about buying\" clothes",
+      "\"saved this for later\" outfit",
+      "\"does this run small\" clothing",
+      "\"does this run large\" clothing",
+      "\"second thoughts before buying\" clothes",
+      "\"returning this because\" online clothes",
+      "\"not sure if this suits me\" outfit",
+      "\"which one should I buy\" outfit",
+      "\"help me decide\" dress",
+      "\"waiting for sale\" clothes online",
+      "\"buyer's remorse\" fashion online",
+      "\"impulse buy vs actually needed\" fashion"
     ]
   },
   "youtube": {
