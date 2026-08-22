@@ -43,7 +43,11 @@ def get_gemini_client() -> Any:
             "Tag this user-generated text about shopping on Myntra. "
             "Use ONLY the specific enums provided in the JSON schema. "
             "If the text does not state something explicitly, use the 'not_stated' or equivalent default value. "
-            "Never infer segment signals unless explicitly evident in the text."
+            "Never infer segment signals unless explicitly evident in the text.\n"
+            "This text may not mention 'wishlist' explicitly. Still classify it if it describes hesitation, "
+            "delay, comparison, or a decision not to buy something the person liked or considered — "
+            "the behavior matters more than the literal word wishlist. Ignore and do not classify generic "
+            "delivery, return, payment, or app-bug complaints that have nothing to do with a delayed or hesitant purchase decision."
         )
     )
 
