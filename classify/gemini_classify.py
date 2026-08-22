@@ -133,7 +133,9 @@ def classify_text(model: Any, text: str, source: str, schema: dict) -> dict:
     """
     user_prompt = f"Source: {source}\nBrand: Myntra\nText: {text}"
     
-    for attempt in range(1, LLM_MAX_RETRIES + 1):
+    GEMINI_MAX_RETRIES = 8
+    
+    for attempt in range(1, GEMINI_MAX_RETRIES + 1):
         try:
             response = model.generate_content(
                 user_prompt,
@@ -150,11 +152,11 @@ def classify_text(model: Any, text: str, source: str, schema: dict) -> dict:
             return json.loads(content)
 
         except (ResourceExhausted, InternalServerError) as e:
-            if attempt == LLM_MAX_RETRIES:
+            if attempt == GEMINI_MAX_RETRIES:
                 logger.error("Gemini API failed after %d retries: %s", attempt, e)
                 raise
-            sleep_time = LLM_BACKOFF_BASE ** attempt
-            logger.warning("Gemini API error (attempt %d/%d). Sleeping %.1fs: %s", attempt, LLM_MAX_RETRIES, sleep_time, e)
+            sleep_time = 10 * (2 ** (attempt - 1))
+            logger.warning("Rate limit hit, waiting %ds before retry (attempt %d/%d): %s", sleep_time, attempt, GEMINI_MAX_RETRIES, e)
             time.sleep(sleep_time)
         except json.JSONDecodeError as e:
             logger.error("Failed to parse Gemini JSON response: %s", e)
@@ -198,6 +200,9 @@ def run_gemini_classify() -> dict:
         logger.info("Capping at %d records for this run.", MAX_CLASSIFY_PER_RUN)
 
     for raw_id in ids_to_process:
+        # Hard delay to stay safely under the 15 RPM limit (~13 RPM)
+        time.sleep(4.5)
+
         text_data = get_raw_text(raw_id)
         if not text_data:
             logger.warning("Could not fetch text for raw_id: %s", raw_id)
@@ -213,7 +218,8 @@ def run_gemini_classify() -> dict:
             counts["invalid_json"] += 1
             counts["error"] += 1
             continue
-        except Exception:
+        except Exception as e:
+            logger.error("Failed completely to classify %s: %s. Skipping to next record.", raw_id, e)
             counts["error"] += 1
             continue
 
