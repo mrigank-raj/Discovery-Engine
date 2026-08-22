@@ -6,7 +6,8 @@ import os
 import json
 import logging
 import google.generativeai as genai
-from config.settings import GEMINI_API_KEY
+from groq import Groq
+from config.settings import GEMINI_API_KEY, GROQ_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -14,19 +15,43 @@ logger = logging.getLogger(__name__)
 if GEMINI_API_KEY and GEMINI_API_KEY != "your-gemini-api-key":
     genai.configure(api_key=GEMINI_API_KEY)
 
+def generate_with_fallback(prompt: str) -> str:
+    """Try Gemini first, fallback to Groq if quota is exceeded."""
+    try:
+        if not GEMINI_API_KEY or GEMINI_API_KEY == "your-gemini-api-key":
+            raise ValueError("Gemini API key missing")
+        model = genai.GenerativeModel('gemini-3.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        logger.warning(f"Gemini generation failed ({e}), falling back to Groq.")
+        if not GROQ_API_KEY or GROQ_API_KEY == "your-groq-api-key":
+            return f"⚠️ **AI Synthesis Error**: Failed to generate insights with Gemini ({str(e)}) and no Groq fallback key is available."
+        
+        try:
+            client = Groq(api_key=GROQ_API_KEY)
+            response = client.chat.completions.create(
+                model="llama3-70b-8192",
+                messages=[
+                    {"role": "system", "content": "You are a senior PM assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2
+            )
+            return response.choices[0].message.content
+        except Exception as groq_e:
+            logger.error(f"Groq fallback also failed: {groq_e}")
+            return f"⚠️ **AI Synthesis Error**: Both Gemini and Groq APIs failed. (Gemini: {str(e)} | Groq: {str(groq_e)})"
+
 def generate_executive_synthesis(df_board, df_quotes, week_start):
     """
     Generates a Staff-PM level executive synthesis of the week's data.
     Decomposes Wishlist -> Purchase Conversion into product outcomes and user behaviors.
     """
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "your-gemini-api-key":
-        return "⚠️ **AI Insights Disabled**: Gemini API key is missing. Please configure it in the .env file."
-        
     if df_board.empty:
         return "No data available for synthesis this week."
 
     # Prepare data context for the AI
-    # We take the top 15 highest-scoring opportunity areas across all questions
     top_opps = df_board.sort_values(by="score", ascending=False).head(15)
     
     context_data = []
@@ -69,23 +94,13 @@ Decompose this metric into:
 Do NOT just list the data. Synthesize it. Tell the Growth PMs exactly what the data means for the business.
 Format with clean markdown for readability. Do not use greeting/closing phrases, just output the structured synthesis.
 """
-
-    try:
-        model = genai.GenerativeModel('gemini-3.5-flash')
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        logger.error(f"Failed to generate synthesis: {e}")
-        return f"⚠️ **AI Synthesis Error**: Failed to generate insights. ({str(e)})"
+    return generate_with_fallback(prompt)
 
 
 def ask_the_engine(question, df_board):
     """
     Guarded chat interface for PMs to ask questions about the data.
     """
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "your-gemini-api-key":
-        return "⚠️ **AI Insights Disabled**: Gemini API key is missing."
-
     # Prepare context (top 30 themes)
     top_opps = df_board.sort_values(by="score", ascending=False).head(30)
     context_data = []
@@ -110,11 +125,4 @@ PM's Question: "{question}"
 
 Answer the question professionally, directly referencing the dataset where possible to provide trustable, data-backed insights.
 """
-
-    try:
-        model = genai.GenerativeModel('gemini-3.5-flash')
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        logger.error(f"Failed to answer query: {e}")
-        return f"⚠️ Error generating response: {str(e)}"
+    return generate_with_fallback(prompt)
