@@ -213,20 +213,6 @@ for i, stage in enumerate(journey_stages):
 st.divider()
 
 # ---------------------------------------------------------
-# Segment Comparison (Section 4)
-# ---------------------------------------------------------
-st.header("Segment Comparison")
-st.caption("Illustrative segment pattern. *Note: Exact demographic splits are simulated for prototype demonstration.*")
-
-segment_data = {
-    "Driver / Barrier": ["Price Uncertainty", "Fit Uncertainty", "Delivery Anxiety", "Social Proof Needed"],
-    "First-Time Shoppers": ["High", "High", "High", "High"],
-    "Repeat Shoppers": ["Medium", "Low", "Medium", "Low"],
-    "High-Intent Wishlisters": ["Low", "High", "High", "Medium"]
-}
-st.table(pd.DataFrame(segment_data).set_index("Driver / Barrier"))
-
-# ---------------------------------------------------------
 # Methodology (Footer)
 # ---------------------------------------------------------
 st.divider()
