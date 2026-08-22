@@ -62,6 +62,9 @@ Decompose this metric into:
 1. The **User Behaviors** that are currently causing friction or driving intent (based on the data).
 2. The specific **Product Outcomes** that Growth PMs need to drive in order to unblock that conversion and improve the metric.
 3. **Actionable User Research Hypotheses**: Provide 2-3 specific, testable hypotheses derived from these insights that a PM could immediately take to a User Research team to validate.
+   - **CRITICAL**: Assume Myntra already has baseline e-commerce features (e.g., standard 14-day return policies, standard delivery dates on the Product Page, standard wishlists). 
+   - DO NOT suggest building things Myntra already has. 
+   - Instead, your hypotheses MUST focus on novel Growth tactics, discovery UX improvements, context-aware nudges (e.g., surfacing existing policies dynamically in the Wishlist), urgency triggers, or addressing specific friction points in new ways.
 
 Do NOT just list the data. Synthesize it. Tell the Growth PMs exactly what the data means for the business.
 Format with clean markdown for readability. Do not use greeting/closing phrases, just output the structured synthesis.
