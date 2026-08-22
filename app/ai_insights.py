@@ -79,17 +79,14 @@ You MUST format your output as 3-4 distinct "Insight Cards" rather than a wall o
 For each insight, provide:
 - A bold, punchy title (e.g., **01 — Delivery uncertainty is a recurring purchase barrier**)
 - A short 1-2 sentence explanation.
-- The relevant segment or signal strength if applicable.
+- Only mention a segment (e.g. first-time shoppers, price-sensitive users) if the word 'segment' or a specific named group appears in the underlying theme data provided. If no segment information is present in the context_data for this theme, omit any mention of a segment entirely — do not guess, infer, or generalize one. Do not fabricate demographic labels like 'Gen Z' or 'Tier 2 users' under any circumstances unless that exact information is present in the input data.
+
+Every number you report (severity score, frequency, impact score) must be copied exactly from the context_data provided — never estimate, round dramatically, or invent a number not present in the input.
 
 After the insight cards, you MUST explicitly break down the core business metric: **Wishlist → Purchase Conversion (within 30 days)**.
 
 Decompose this metric into:
 1. The **User Behaviors** that are currently causing friction or driving intent (based on the data).
-2. The specific **Product Outcomes** that Growth PMs need to drive in order to unblock that conversion and improve the metric.
-3. **Actionable User Research Hypotheses**: Provide 2-3 specific, testable hypotheses derived from these insights that a PM could immediately take to a User Research team to validate.
-   - **CRITICAL**: Assume Myntra already has baseline e-commerce features (e.g., standard 14-day return policies, standard delivery dates on the Product Page, standard wishlists). 
-   - DO NOT suggest building things Myntra already has. 
-   - Instead, your hypotheses MUST focus on novel Growth tactics, discovery UX improvements, context-aware nudges (e.g., surfacing existing policies dynamically in the Wishlist), urgency triggers, or addressing specific friction points in new ways.
 
 Do NOT just list the data. Synthesize it. Tell the Growth PMs exactly what the data means for the business.
 Format with clean markdown for readability. Do not use greeting/closing phrases, just output the structured synthesis.
