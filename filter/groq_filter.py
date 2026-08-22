@@ -28,8 +28,8 @@ from db.supabase_client import (
 
 logger = logging.getLogger(__name__)
 
-# Use a fast model for the binary classification gate
-GROQ_MODEL = "openai/gpt-oss-20b"
+# Use a fast, supported Groq model for the binary classification gate
+GROQ_MODEL = "llama-3.1-8b-instant"
 
 SYSTEM_PROMPT = """
 You are a data filtering assistant. Your job is to identify if user-generated texts are relevant to Myntra shopping behavior.
@@ -78,7 +78,9 @@ def filter_batch(client: Groq, batch: list[dict]) -> dict[str, Any]:
         {"role": "user", "content": json.dumps(user_content, ensure_ascii=False)},
     ]
 
-    for attempt in range(1, LLM_MAX_RETRIES + 1):
+    GROQ_MAX_RETRIES = 8
+
+    for attempt in range(1, GROQ_MAX_RETRIES + 1):
         try:
             response = client.chat.completions.create(
                 model=GROQ_MODEL,
@@ -105,11 +107,11 @@ def filter_batch(client: Groq, batch: list[dict]) -> dict[str, Any]:
             return mapped_results
 
         except (RateLimitError, InternalServerError) as e:
-            if attempt == LLM_MAX_RETRIES:
+            if attempt == GROQ_MAX_RETRIES:
                 logger.error("Groq API failed after %d retries: %s", attempt, e)
                 raise
-            sleep_time = LLM_BACKOFF_BASE ** attempt
-            logger.warning("Groq API error (attempt %d/%d). Sleeping %.1fs: %s", attempt, LLM_MAX_RETRIES, sleep_time, e)
+            sleep_time = 10 * (2 ** (attempt - 1))
+            logger.warning("Groq API error (attempt %d/%d). Sleeping %ds: %s", attempt, GROQ_MAX_RETRIES, sleep_time, e)
             time.sleep(sleep_time)
         except json.JSONDecodeError as e:
             logger.error("Failed to parse Groq JSON response: %s", e)
@@ -169,13 +171,16 @@ def run_groq_filter() -> dict:
         if len(batch) >= GROQ_BATCH_SIZE or i == len(ids_to_process) - 1:
             logger.info("Filtering batch of %d records...", len(batch))
             
+            # Hard delay to stay under the 30 RPM limit
+            time.sleep(2.5)
+
             try:
                 results = filter_batch(client, batch)
             except Exception as e:
-                logger.error("Filter batch failed completely: %s", e)
+                logger.error("Filter batch failed completely: %s. Skipping to next batch.", e)
                 counts["error"] += len(batch)
-                # If we hit a hard error (like rate limit exhausted), stop processing
-                break
+                batch = []
+                continue
 
             if not results:
                 counts["error"] += len(batch)
