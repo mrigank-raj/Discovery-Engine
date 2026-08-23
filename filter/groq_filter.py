@@ -28,8 +28,8 @@ from db.supabase_client import (
 
 logger = logging.getLogger(__name__)
 
-# Use a fast, supported Groq model for the binary classification gate
-GROQ_MODEL = "llama-3.1-8b-instant"
+# Use a fast model for the binary classification gate
+GROQ_MODEL = "openai/gpt-oss-20b"
 
 SYSTEM_PROMPT = """
 You are a data filtering assistant. Your job is to identify if user-generated texts are relevant to Myntra shopping behavior.

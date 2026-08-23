@@ -28,7 +28,18 @@
     ]
   },
   "youtube": {
-    "video_ids": []
+    "video_ids": [],
+    "search_queries": [
+      "Myntra haul review",
+      "AJIO vs Myntra try on haul",
+      "returning Myntra clothes",
+      "online shopping fit disappointment",
+      "does this run small try on",
+      "Myntra size chart confusion",
+      "should I buy this online fashion",
+      "online fashion shopping regret",
+      "Nykaa Fashion haul review"
+    ]
   },
   "product_pages": {
     "urls": []

@@ -42,28 +42,37 @@ def fetch_youtube_records(run_id: str, max_pages_per_video: int = 5) -> dict:
 
     sources = load_sources().get("youtube", {})
     video_ids = sources.get("video_ids", [])
+    search_queries = sources.get("search_queries", ["Myntra haul review"])
     
-    if not video_ids:
+    videos_to_fetch = []
+    
+    if video_ids:
+        for vid in video_ids:
+            videos_to_fetch.append((vid, "manual"))
+    else:
         logger.info("No YouTube video IDs configured. Auto-discovering via Search API...")
-        try:
-            search_response = youtube.search().list(
-                q="Myntra haul review",
-                part="id",
-                maxResults=5,
-                type="video",
-                order="relevance"
-            ).execute()
-            video_ids = [item["id"]["videoId"] for item in search_response.get("items", [])]
-            logger.info(f"Auto-discovered {len(video_ids)} videos: {video_ids}")
-        except Exception as e:
-            logger.error(f"Failed to auto-discover videos: {e}")
+        for query in search_queries:
+            try:
+                search_response = youtube.search().list(
+                    q=query,
+                    part="id",
+                    maxResults=5,
+                    type="video",
+                    order="relevance"
+                ).execute()
+                found_ids = [item["id"]["videoId"] for item in search_response.get("items", [])]
+                logger.info(f"Auto-discovered {len(found_ids)} videos for query '{query}': {found_ids}")
+                for vid in found_ids:
+                    videos_to_fetch.append((vid, query))
+            except Exception as e:
+                logger.error(f"Failed to auto-discover videos for query '{query}': {e}")
             
-    if not video_ids:
+    if not videos_to_fetch:
         logger.info("No YouTube video IDs found. Skipping YouTube ingest.")
         return counts
 
-    for video_id in video_ids:
-        logger.info(f"Fetching comments for YouTube video: {video_id}")
+    for video_id, query_used in videos_to_fetch:
+        logger.info(f"Fetching comments for YouTube video: {video_id} (Query: {query_used})")
         
         try:
             next_page_token = None
@@ -95,6 +104,7 @@ def fetch_youtube_records(run_id: str, max_pages_per_video: int = 5) -> dict:
                         "ingest_run_id": run_id,
                         "source_meta": {
                             "video_id": video_id,
+                            "search_query": query_used,
                             "author": comment.get("authorDisplayName", "Unknown"),
                             "like_count": comment.get("likeCount", 0)
                         }
@@ -102,9 +112,9 @@ def fetch_youtube_records(run_id: str, max_pages_per_video: int = 5) -> dict:
                     
                 if records:
                     counts["fetched"] += len(records)
-                    ins, skip = upsert_raw_records(records)
-                    counts["inserted"] += ins
-                    counts["skipped_duplicate"] += skip
+                    res = upsert_raw_records(records)
+                    counts["inserted"] += res["inserted"]
+                    counts["skipped_duplicate"] += res["skipped_duplicate"]
                     
                 next_page_token = response.get("nextPageToken")
                 pages_fetched += 1

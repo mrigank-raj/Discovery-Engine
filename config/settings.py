@@ -37,6 +37,7 @@ SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
 # ---------------------------------------------------------------------------
 GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+GEMINI_API_KEY_FALLBACK: str = os.getenv("GEMINI_API_KEY_FALLBACK", "")
 
 # ---------------------------------------------------------------------------
 # Reddit API
