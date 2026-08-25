@@ -343,17 +343,17 @@ setInterval(() => {{
 }}, 2500);
 
 // 2. Chat Header Relocation Logic
-function initHeader() {
+function initHeader() {{
     const sourceHeader = parentDoc.getElementById('chat-header-source');
     const chatContainer = parentDoc.querySelector('[data-testid="stChatInput"]');
     
-    if (sourceHeader && chatContainer) {
-        if (sourceHeader.style.display === 'none') {
+    if (sourceHeader && chatContainer) {{
+        if (sourceHeader.style.display === 'none') {{
             sourceHeader.style.display = 'block';
             chatContainer.parentNode.insertBefore(sourceHeader, chatContainer);
-        }
-    }
-}
+        }}
+    }}
+}}
 
 // 3. Dropdown Logic
 function initDropdown() {{
@@ -419,11 +419,11 @@ initHeader();
 initDropdown();
 
 // Fallback to observer if DOM loads later
-const observer = new MutationObserver(() => {
+const observer = new MutationObserver(() => {{
     initHeader();
     initDropdown();
-});
-observer.observe(parentDoc.body, { childList: true, subtree: true });
+}});
+observer.observe(parentDoc.body, {{ childList: true, subtree: true }});
 </script>
 """
 import streamlit.components.v1 as components
