@@ -25,11 +25,11 @@ CREATE TABLE IF NOT EXISTS raw_records (
     id              text        PRIMARY KEY,
     source          text        NOT NULL
                                 CHECK (source IN (
-                                    'play_store', 'reddit', 'youtube',
+                                    'play_store', 'reddit', 'youtube', 'app_store',
                                     'product_page', 'twitter', 'community'
                                 )),
     brand           text        NOT NULL DEFAULT 'myntra'
-                                CHECK (brand = 'myntra'),
+                                CHECK (brand IN ('myntra', 'ajio', 'nykaa_fashion')),
     raw_text        text        NOT NULL CHECK (length(trim(raw_text)) > 0),
     date_collected  timestamptz NOT NULL DEFAULT now(),
     date_posted     timestamptz,

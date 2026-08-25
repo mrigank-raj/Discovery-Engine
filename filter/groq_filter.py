@@ -9,12 +9,16 @@ Relevant records proceed to Gemini classification.
 import json
 import logging
 import time
-from typing import Any
+from typing import Any, Tuple
 
 from groq import Groq, InternalServerError, RateLimitError
+import google.generativeai as genai
+from google.generativeai.types import GenerationConfig
 
 from config.settings import (
     GROQ_API_KEY,
+    GEMINI_API_KEY,
+    GEMINI_API_KEY_FALLBACK,
     GROQ_BATCH_SIZE,
     LLM_BACKOFF_BASE,
     LLM_MAX_RETRIES,
@@ -57,72 +61,151 @@ You must reply in strict JSON format matching exactly this schema:
 }
 """
 
-
-def get_groq_client() -> Groq:
-    """Initialize the Groq client."""
+def get_groq_client():
     if not GROQ_API_KEY:
-        raise EnvironmentError("GROQ_API_KEY is not set.")
+        return None
     return Groq(api_key=GROQ_API_KEY)
 
+def get_gemini_client(api_key: str) -> Any:
+    if not api_key:
+        return None
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel(
+        model_name="gemini-3.5-flash",
+        system_instruction=SYSTEM_PROMPT.strip()
+    )
 
-def filter_batch(client: Groq, batch: list[dict]) -> dict[str, Any]:
+
+def filter_batch(batch: list[dict]) -> Tuple[dict[str, Any], str]:
     """
-    Call Groq to filter a batch of records.
-    Returns a dict mapping raw_id -> {'relevant': bool, 'reason': str}
+    Call LLM to filter a batch of records, falling back from Groq to Gemini Primary to Gemini Fallback.
+    Returns (dict mapping raw_id -> {'relevant': bool, 'reason': str}, model_used)
     """
     # Prepare the user prompt with the batch
     user_content = {"texts": batch}
+    user_prompt = json.dumps(user_content, ensure_ascii=False)
     
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT.strip()},
-        {"role": "user", "content": json.dumps(user_content, ensure_ascii=False)},
-    ]
+    MAX_RETRIES = 3
 
-    GROQ_MAX_RETRIES = 8
+    # 1. Primary: Groq
+    groq_client = get_groq_client()
+    if groq_client:
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT.strip()},
+            {"role": "user", "content": user_prompt},
+        ]
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = groq_client.chat.completions.create(
+                    model=GROQ_MODEL,
+                    messages=messages,
+                    response_format={"type": "json_object"},
+                    temperature=0.0,
+                )
+                content = response.choices[0].message.content
+                if not content:
+                    raise ValueError("Empty response from Groq")
+                parsed = json.loads(content)
+                if "results" not in parsed:
+                    raise ValueError("Response missing 'results' array")
 
-    for attempt in range(1, GROQ_MAX_RETRIES + 1):
-        try:
-            response = client.chat.completions.create(
-                model=GROQ_MODEL,
-                messages=messages,
-                response_format={"type": "json_object"},
-                temperature=0.0, # Deterministic
-            )
-            content = response.choices[0].message.content
-            if not content:
-                raise ValueError("Empty response from Groq")
+                mapped_results = {}
+                for res in parsed["results"]:
+                    if "id" in res and "relevant" in res:
+                        mapped_results[res["id"]] = {
+                            "relevant": bool(res["relevant"]),
+                            "reason": res.get("reason", ""),
+                        }
+                return mapped_results, "groq:openai/gpt-oss-20b"
+            except json.JSONDecodeError:
+                logger.error("Groq JSON parse error, falling back to next provider.")
+                break
+            except Exception as e:
+                if attempt == MAX_RETRIES:
+                    logger.error(f"Groq failed after {attempt} retries: {e}")
+                    break
+                sleep_time = 5 * (2 ** (attempt - 1))
+                logger.warning(f"Groq rate limit/error, waiting {sleep_time}s (attempt {attempt}/{MAX_RETRIES}): {e}")
+                time.sleep(sleep_time)
 
-            parsed = json.loads(content)
-            if "results" not in parsed:
-                raise ValueError("Response missing 'results' array")
+    # 2. Secondary: Gemini Primary
+    gemini_primary = get_gemini_client(GEMINI_API_KEY)
+    if gemini_primary:
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = gemini_primary.generate_content(
+                    user_prompt,
+                    generation_config=GenerationConfig(
+                        response_mime_type="application/json",
+                        temperature=0.0,
+                    )
+                )
+                content = response.text
+                if not content:
+                    raise ValueError("Empty response from Gemini Primary")
+                
+                parsed = json.loads(content)
+                if "results" not in parsed:
+                    raise ValueError("Response missing 'results' array")
+                mapped_results = {}
+                for res in parsed["results"]:
+                    if "id" in res and "relevant" in res:
+                        mapped_results[res["id"]] = {
+                            "relevant": bool(res["relevant"]),
+                            "reason": res.get("reason", ""),
+                        }
+                return mapped_results, "gemini-primary:gemini-3.5-flash"
+            except json.JSONDecodeError:
+                logger.error("Gemini Primary JSON parse error, falling back to next provider.")
+                break
+            except Exception as e:
+                if attempt == MAX_RETRIES:
+                    logger.error(f"Gemini Primary failed after {attempt} retries: {e}")
+                    break
+                sleep_time = 5 * (2 ** (attempt - 1))
+                logger.warning(f"Gemini Primary rate limit/error, waiting {sleep_time}s (attempt {attempt}/{MAX_RETRIES}): {e}")
+                time.sleep(sleep_time)
 
-            # Map results by ID
-            mapped_results = {}
-            for res in parsed["results"]:
-                if "id" in res and "relevant" in res:
-                    mapped_results[res["id"]] = {
-                        "relevant": bool(res["relevant"]),
-                        "reason": res.get("reason", ""),
-                    }
-            return mapped_results
-
-        except (RateLimitError, InternalServerError) as e:
-            if attempt == GROQ_MAX_RETRIES:
-                logger.error("Groq API failed after %d retries: %s", attempt, e)
-                raise
-            sleep_time = 10 * (2 ** (attempt - 1))
-            logger.warning("Groq API error (attempt %d/%d). Sleeping %ds: %s", attempt, GROQ_MAX_RETRIES, sleep_time, e)
-            time.sleep(sleep_time)
-        except json.JSONDecodeError as e:
-            logger.error("Failed to parse Groq JSON response: %s", e)
-            # We don't retry on bad JSON to save time/quota — just fail this batch
-            # Next pipeline run can pick these up again
-            return {}
-        except Exception as e:
-            logger.error("Unexpected error calling Groq: %s", e)
-            return {}
+    # 3. Tertiary: Gemini Fallback
+    gemini_fallback = get_gemini_client(GEMINI_API_KEY_FALLBACK)
+    if gemini_fallback:
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = gemini_fallback.generate_content(
+                    user_prompt,
+                    generation_config=GenerationConfig(
+                        response_mime_type="application/json",
+                        temperature=0.0,
+                    )
+                )
+                content = response.text
+                if not content:
+                    raise ValueError("Empty response from Gemini Fallback")
+                
+                parsed = json.loads(content)
+                if "results" not in parsed:
+                    raise ValueError("Response missing 'results' array")
+                mapped_results = {}
+                for res in parsed["results"]:
+                    if "id" in res and "relevant" in res:
+                        mapped_results[res["id"]] = {
+                            "relevant": bool(res["relevant"]),
+                            "reason": res.get("reason", ""),
+                        }
+                return mapped_results, "gemini-fallback:gemini-3.5-flash"
+            except json.JSONDecodeError:
+                logger.error("Gemini Fallback JSON parse error.")
+                break
+            except Exception as e:
+                if attempt == MAX_RETRIES:
+                    logger.error(f"Gemini Fallback failed after {attempt} retries: {e}")
+                    break
+                sleep_time = 5 * (2 ** (attempt - 1))
+                logger.warning(f"Gemini Fallback rate limit/error, waiting {sleep_time}s (attempt {attempt}/{MAX_RETRIES}): {e}")
+                time.sleep(sleep_time)
             
-    return {}
+    logger.error("All filtering providers failed for this batch.")
+    return {}, ""
 
 
 def run_groq_filter() -> dict:
@@ -137,12 +220,6 @@ def run_groq_filter() -> dict:
     counts = {"processed": 0, "relevant": 0, "discarded": 0, "error": 0}
 
     logger.info("Starting Groq filter stage.")
-    try:
-        client = get_groq_client()
-    except EnvironmentError as e:
-        logger.error("Skipping filter stage: %s", e)
-        counts["error"] = 1
-        return counts
 
     unfiltered_ids = get_unfiltered_raw_ids()
     logger.info("Found %d unfiltered records.", len(unfiltered_ids))
@@ -175,7 +252,7 @@ def run_groq_filter() -> dict:
             time.sleep(2.5)
 
             try:
-                results = filter_batch(client, batch)
+                results, success_model = filter_batch(batch)
             except Exception as e:
                 logger.error("Filter batch failed completely: %s. Skipping to next batch.", e)
                 counts["error"] += len(batch)
@@ -202,7 +279,7 @@ def run_groq_filter() -> dict:
                             raw_id=item_id,
                             filter_status=status,
                             filter_reason=reason,
-                            model_filter=GROQ_MODEL
+                            model_filter=success_model
                         )
                         counts["processed"] += 1
                         if is_relevant:

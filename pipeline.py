@@ -15,6 +15,7 @@ from config.settings import validate_pipeline_env
 from db.supabase_client import close_pipeline_run, insert_pipeline_run
 from ingest.play_store import ingest_play_store
 from ingest.reddit import fetch_reddit_records
+from ingest.app_store import fetch_app_store_records
 from ingest.youtube import fetch_youtube_records
 from filter.groq_filter import run_groq_filter
 from classify.gemini_classify import run_gemini_classify
@@ -46,6 +47,7 @@ def run_pipeline(mode: str) -> None:
     counts = {
         "ingest": {
             "play_store": {"fetched": 0, "inserted": 0, "skipped_duplicate": 0, "error": 0},
+            "app_store": {"fetched": 0, "inserted": 0, "skipped_duplicate": 0, "error": 0},
             # reddit, youtube, product_page to be added
         },
         "filter": {"processed": 0, "relevant": 0, "discarded": 0, "error": 0},
@@ -71,7 +73,19 @@ def run_pipeline(mode: str) -> None:
             overall_status = "partial"
             error_summary.append(f"Play Store failed: {e}")
 
-        # 1B. Reddit (SKIPPED PER USER REQUEST)
+        # 1B. App Store
+        try:
+            app_store_counts = fetch_app_store_records(run_id)
+            counts["ingest"]["app_store"] = app_store_counts
+            if app_store_counts.get("error", 0) > 0:
+                overall_status = "partial"
+                error_summary.append("App Store ingest encountered errors.")
+        except Exception as e:
+            logger.exception("App Store ingest failed entirely.")
+            overall_status = "partial"
+            error_summary.append(f"App Store failed: {e}")
+
+        # 1C. Reddit (SKIPPED PER USER REQUEST)
         # try:
         #     reddit_counts = fetch_reddit_records(run_id)
         #     counts["ingest"]["reddit"] = reddit_counts

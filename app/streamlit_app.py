@@ -22,7 +22,7 @@ from db.supabase_client import (
 from app.ai_insights import generate_executive_synthesis, ask_the_engine
 
 st.set_page_config(
-    page_title="Myntra Discovery Engine",
+    page_title="Wishlist Signal Engine",
     page_icon="🛍️",
     layout="wide"
 )
@@ -63,7 +63,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<h1 class="myntra-header">Myntra Growth Discovery Engine</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="myntra-header">Wishlist Signal Engine</h1>', unsafe_allow_html=True)
 st.markdown("### Public-signal intelligence for Wishlist → Purchase Conversion")
 
 # Fetch data
@@ -87,7 +87,17 @@ if df_board.empty:
 week_start = df_board["week_start"].iloc[0]
 
 # Methodology & Metadata
-st.caption(f"**Public conversations analyzed** (Reddit, YouTube, App Reviews, Web) | **Last updated**: {week_start} | *Illustrative prototype dataset*")
+if last_run and last_run.get('finished_at'):
+    try:
+        # Handle standard ISO strings safely
+        dt = datetime.fromisoformat(last_run['finished_at'].replace('Z', '+00:00'))
+        last_refreshed = dt.strftime("%Y-%m-%d %H:%M UTC")
+    except Exception:
+        last_refreshed = last_run['finished_at']
+else:
+    last_refreshed = 'Unknown'
+
+st.caption(f"**Public conversations analyzed** (Reddit, YouTube, App Reviews, Web) | **Cohort Week**: {week_start} | **Data last refreshed**: {last_refreshed} | *Live discovery data — sample size still growing*")
 
 st.divider()
 
@@ -140,25 +150,46 @@ for _, row in top_opps.iterrows():
     theme_field = row.get("theme_field", "")
     theme_value = row.get("theme_value", "")
     
-    # Calculate mock confidence based on frequency
+    # Fix boolean titles
+    str_val = str(theme_value).lower()
+    if str_val in ("true", "false"):
+        display_title = str(theme_field).replace('_', ' ').title()
+        display_category = "Boolean Signal"
+    else:
+        display_title = str(theme_value).replace('_', ' ').title()
+        display_category = str(theme_field).replace('_', ' ').title()
+
     freq = row.get("frequency", 0)
-    confidence = "High" if freq > 10 else ("Medium" if freq > 5 else "Low")
     
     # Trend mapping
     trend_val = row.get("trend", "flat")
     trend_icon = "↑" if trend_val == "up" else ("↓" if trend_val == "down" else "→")
     
     with st.container():
-        st.markdown(f"### {str(theme_value).replace('_', ' ').title()}")
-        st.caption(f"**Category:** {str(theme_field).replace('_', ' ').title()}")
+        st.markdown(f"### {display_title}")
+        st.caption(f"**Category:** {display_category}")
         cols = st.columns(3)
         cols[0].markdown(f"**Signal Strength:** {row.get('score', 0):.1f}")
         cols[1].markdown(f"**Trend:** {trend_icon}")
-        cols[2].markdown(f"**Evidence Confidence:** {confidence}")
+        cols[2].markdown(f"**Weekly Volume:** {freq} mentions")
         
         with st.expander("View Evidence"):
             # Evidence Explorer
             theme_quotes = df_quotes[df_quotes["theme_key"] == theme_key]
+            
+            # Clean up potential view duplicates
+            if not theme_quotes.empty and "raw_text" in theme_quotes.columns:
+                theme_quotes = theme_quotes.drop_duplicates(subset=["raw_text"])
+            
+            # Restrict to the specific, high-quality quotes selected by the aggregation engine
+            quote_ids = row.get("quote_raw_ids", [])
+            if isinstance(quote_ids, list) and len(quote_ids) > 0:
+                id_col = "raw_id" if "raw_id" in theme_quotes.columns else ("id" if "id" in theme_quotes.columns else None)
+                if id_col:
+                    best_quotes = theme_quotes[theme_quotes[id_col].isin(quote_ids)]
+                    if not best_quotes.empty:
+                        theme_quotes = best_quotes
+
             if theme_quotes.empty:
                 st.info("No direct quotes available for this theme.")
             else:
@@ -171,10 +202,6 @@ for _, row in top_opps.iterrows():
                 st.markdown("#### Representative Evidence")
                 for _, quote_row in theme_quotes.head(3).iterrows():
                     st.markdown(f"> \"{quote_row['raw_text']}\" \n> *- {str(quote_row['source']).replace('_', ' ').title()}*")
-                
-                st.markdown("#### Contradictory Evidence")
-                st.caption("Illustrative counter-point to demonstrate analytical rigor.")
-                st.markdown(f"> While '{str(theme_value).replace('_', ' ').title()}' is a barrier, a subset of users report it is secondary to price and brand trust.")
         
         st.divider()
 
@@ -205,7 +232,12 @@ for i, stage in enumerate(journey_stages):
         found_any = False
         for _, row in df_filtered.iterrows():
             if row["theme_field"] in stage_themes:
-                st.markdown(f"- {str(row['theme_value']).replace('_', ' ').title()}")
+                str_val = str(row['theme_value']).lower()
+                if str_val in ("true", "false"):
+                    display_val = str(row['theme_field']).replace('_', ' ').title()
+                else:
+                    display_val = str(row['theme_value']).replace('_', ' ').title()
+                st.markdown(f"- {display_val}")
                 found_any = True
         if not found_any:
             st.caption("-")
@@ -219,8 +251,7 @@ st.divider()
 st.markdown("### Methodology & Limitations")
 st.caption("""
 **Public-signal dataset**: Reddit · YouTube · Play Store · App Store · Product conversations. 
-*This is a prototype dataset. Public conversations do not represent first-party Myntra behavioral telemetry, internal GMV, or actual PII.*
-Opportunity strength combines frequency, cross-source consistency, relevance to the target metric, and evidence confidence.
+*Live discovery data — sample size still growing. Opportunity strength combines frequency, cross-source consistency, relevance to the target metric, and quote quality.*
 """)
 
 # ---------------------------------------------------------
