@@ -73,6 +73,12 @@ Improving this metric increases purchase frequency, improves monetization from e
 Here is the raw data for the highest-scoring opportunity areas discovered this week ({week_start}):
 {json.dumps(context_data, indent=2)}
 
+RULES FOR NARRATIVE TONE & CONFIDENCE:
+1. Match your confidence language to the sample size. If frequency_mentions is 1-2, describe it as 'a single/early signal' or 'worth monitoring, low volume' — never use language like 'critical,' 'clear drop-off,' 'rising friction,' or 'requires targeted action' for anything with frequency_mentions below 5. If frequency_mentions is 5-10, you may use moderate language like 'an emerging pattern.' Only use strong language ('significant,' 'primary driver') for frequency_mentions above 10.
+2. Do not invent causal narrative connectors that aren't in the data — phrases like 'indicating a clear drop-off,' 'stalls checkout motivation,' or 'accelerating their decision to purchase' assert a mechanism the raw counts don't establish. State the finding plainly (e.g. 'X was mentioned N times') and let the number speak for itself rather than dressing it in a confident causal story.
+3. Do not recommend or imply solutions or incentives (e.g. 'requires targeted activation incentives') — this synthesis describes patterns only, it does not prescribe actions. This rule was already established and must continue to apply.
+4. At the top of the synthesis output, before any insight cards, include one honest sentence stating the total sample size analyzed this run (e.g. 'Based on N classified signals this week') so readers can calibrate confidence in what follows.
+
 TASK:
 Write a concise, high-impact Executive Synthesis tailored specifically for Growth PMs. 
 You MUST format your output as 3-4 distinct "Insight Cards" rather than a wall of text.
