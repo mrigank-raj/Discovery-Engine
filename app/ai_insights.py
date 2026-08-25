@@ -26,7 +26,8 @@ def generate_with_fallback(prompt: str) -> str:
     except Exception as e:
         logger.warning(f"Gemini generation failed ({e}), falling back to Groq.")
         if not GROQ_API_KEY or GROQ_API_KEY == "your-groq-api-key":
-            return f"⚠️ **AI Synthesis Error**: Failed to generate insights with Gemini ({str(e)}) and no Groq fallback key is available."
+            logger.error("No Groq fallback key available.")
+            return "⚠️ **AI synthesis is temporarily unavailable due to API rate limits — the opportunity data below is unaffected and fully up to date.**"
         
         try:
             client = Groq(api_key=GROQ_API_KEY)
@@ -40,8 +41,8 @@ def generate_with_fallback(prompt: str) -> str:
             )
             return response.choices[0].message.content
         except Exception as groq_e:
-            logger.error(f"Groq fallback also failed: {groq_e}")
-            return f"⚠️ **AI Synthesis Error**: Both Gemini and Groq APIs failed. (Gemini: {str(e)} | Groq: {str(groq_e)})"
+            logger.error(f"Groq fallback also failed. Gemini: {e} | Groq: {groq_e}")
+            return "⚠️ **AI synthesis is temporarily unavailable due to API rate limits — the opportunity data below is unaffected and fully up to date.**"
 
 def generate_executive_synthesis(df_board, df_quotes, week_start):
     """

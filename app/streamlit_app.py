@@ -218,7 +218,6 @@ for _, row in top_opps.iterrows():
 st.header("Wishlist Journey Map")
 st.caption("Discovered user problems mapped to the Wishlist → Purchase conversion funnel.")
 
-journey_cols = st.columns(5)
 journey_stages = ["Discover", "Wishlist", "Compare", "Validate", "Wait/Purchase"]
 
 # Illustrative mapping of our themes
@@ -230,24 +229,24 @@ mapping = {
     "Wait/Purchase": ["purchase_blocker", "purchase_postponement_reason", "unmet_need"]
 }
 
-for i, stage in enumerate(journey_stages):
-    with journey_cols[i]:
-        st.markdown(f"**{stage}**")
-        st.markdown("↓")
-        # Find themes that belong to this stage
-        stage_themes = mapping.get(stage, [])
-        found_any = False
-        for _, row in df_filtered.iterrows():
-            if row["theme_field"] in stage_themes:
-                str_val = str(row['theme_value']).lower()
-                if str_val in ("true", "false"):
-                    display_val = str(row['theme_field']).replace('_', ' ').title()
-                else:
-                    display_val = str(row['theme_value']).replace('_', ' ').title()
-                st.markdown(f"- {display_val}")
-                found_any = True
-        if not found_any:
-            st.caption("-")
+for stage in journey_stages:
+    stage_themes = mapping.get(stage, [])
+    detected_signals = []
+    for _, row in df_filtered.iterrows():
+        if row["theme_field"] in stage_themes:
+            str_val = str(row['theme_value']).lower()
+            if str_val in ("true", "false"):
+                display_val = str(row['theme_field']).replace('_', ' ').title()
+            else:
+                display_val = str(row['theme_value']).replace('_', ' ').title()
+            
+            if display_val not in detected_signals:
+                detected_signals.append(display_val)
+                
+    if detected_signals:
+        st.markdown(f"**{stage}**: {', '.join(detected_signals)}")
+    else:
+        st.markdown(f"**{stage}**: *No signals detected at this stage yet*")
 
 st.divider()
 
