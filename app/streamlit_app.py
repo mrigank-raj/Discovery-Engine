@@ -13,6 +13,13 @@ from datetime import datetime
 # Ensure project root is in sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Inject Streamlit secrets into os.environ so config/settings.py can use os.getenv()
+try:
+    for k, v in st.secrets.items():
+        os.environ[k] = str(v)
+except Exception:
+    pass
+
 from db.supabase_client import (
     get_latest_board,
     get_quotes_for_week,
