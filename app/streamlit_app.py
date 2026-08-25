@@ -253,9 +253,29 @@ st.divider()
 # ---------------------------------------------------------
 # Guarded AI Chat Interface
 # ---------------------------------------------------------
-st.divider()
-st.header("💬 Ask the Discovery Engine")
-st.caption("Ask specific questions about user behaviors, segments, or product outcomes.")
+# We use custom CSS to create a floating header pinned just above the chat input
+st.markdown("""
+<style>
+    .floating-chat-header {
+        position: fixed;
+        bottom: 85px; /* Sits just above the Streamlit chat input */
+        left: 0;
+        width: 100%;
+        background-color: var(--background-color);
+        padding: 20px 3rem 15px 3rem;
+        border-top: 1px solid var(--secondary-background-color);
+        z-index: 999990;
+    }
+    /* Ensure the main container doesn't get hidden behind our floating header */
+    .block-container {
+        padding-bottom: 200px !important;
+    }
+</style>
+<div class="floating-chat-header">
+    <h2 style="margin: 0; font-family: 'Inter', sans-serif;">💬 Ask the Discovery Engine</h2>
+    <p style="margin: 0; font-size: 0.9rem; color: var(--text-color); opacity: 0.8; padding-top: 0.2rem;">Ask specific questions about user behaviors, segments, or product outcomes.</p>
+</div>
+""", unsafe_allow_html=True)
 
 preset_questions = [
     "Why do users add fashion products to their wishlist?",
