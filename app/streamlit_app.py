@@ -251,16 +251,6 @@ for stage in journey_stages:
 st.divider()
 
 # ---------------------------------------------------------
-# Methodology (Footer)
-# ---------------------------------------------------------
-st.divider()
-st.markdown("### Methodology & Limitations")
-st.caption("""
-**Public-signal dataset**: Reddit · YouTube · Play Store · App Store · Product conversations. 
-*Live discovery data — sample size still growing. Opportunity strength combines frequency, cross-source consistency, relevance to the target metric, and quote quality.*
-""")
-
-# ---------------------------------------------------------
 # Guarded AI Chat Interface
 # ---------------------------------------------------------
 st.divider()
@@ -441,3 +431,13 @@ if prompt := st.chat_input("Ask a question..."):
             st.markdown(response)
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
+
+# ---------------------------------------------------------
+# Methodology (Footer)
+# ---------------------------------------------------------
+st.divider()
+st.markdown("### Methodology & Limitations")
+st.caption("""
+**Public-signal dataset**: Reddit · YouTube · Play Store · App Store · Product conversations. 
+*Live discovery data — sample size still growing. Opportunity strength combines frequency, cross-source consistency, relevance to the target metric, and quote quality.*
+""")
