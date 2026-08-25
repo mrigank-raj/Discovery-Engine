@@ -253,27 +253,11 @@ st.divider()
 # ---------------------------------------------------------
 # Guarded AI Chat Interface
 # ---------------------------------------------------------
-# We use custom CSS to create a floating header pinned just above the chat input
+# Hidden header source that our JS will move into the native chat container
 st.markdown("""
-<style>
-    .floating-chat-header {
-        position: fixed;
-        bottom: 85px; /* Sits just above the Streamlit chat input */
-        left: 0;
-        width: 100%;
-        background-color: var(--background-color);
-        padding: 20px 3rem 15px 3rem;
-        border-top: 1px solid var(--secondary-background-color);
-        z-index: 999990;
-    }
-    /* Ensure the main container doesn't get hidden behind our floating header */
-    .block-container {
-        padding-bottom: 200px !important;
-    }
-</style>
-<div class="floating-chat-header">
-    <h2 style="margin: 0; font-family: 'Inter', sans-serif;">💬 Ask the Discovery Engine</h2>
-    <p style="margin: 0; font-size: 0.9rem; color: var(--text-color); opacity: 0.8; padding-top: 0.2rem;">Ask specific questions about user behaviors, segments, or product outcomes.</p>
+<div id="chat-header-source" style="display: none; padding: 10px 0;">
+    <h2 style="margin: 0; padding-bottom: 0.2rem; font-family: 'Inter', sans-serif;">💬 Ask the Discovery Engine</h2>
+    <p style="margin: 0; font-size: 0.9rem; color: var(--text-color); opacity: 0.8;">Ask specific questions about user behaviors, segments, or product outcomes.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -358,7 +342,20 @@ setInterval(() => {{
     }}
 }}, 2500);
 
-// 2. Dropdown Logic
+// 2. Chat Header Relocation Logic
+function initHeader() {
+    const sourceHeader = parentDoc.getElementById('chat-header-source');
+    const chatContainer = parentDoc.querySelector('[data-testid="stChatInput"]');
+    
+    if (sourceHeader && chatContainer) {
+        if (sourceHeader.style.display === 'none') {
+            sourceHeader.style.display = 'block';
+            chatContainer.parentNode.insertBefore(sourceHeader, chatContainer);
+        }
+    }
+}
+
+// 3. Dropdown Logic
 function initDropdown() {{
     if (parentDoc.getElementById('chat-dropdown')) return;
     
@@ -418,11 +415,15 @@ function initDropdown() {{
 }}
 
 // Run immediately in case DOM is already ready
+initHeader();
 initDropdown();
 
 // Fallback to observer if DOM loads later
-const observer = new MutationObserver(initDropdown);
-observer.observe(parentDoc.body, {{ childList: true, subtree: true }});
+const observer = new MutationObserver(() => {
+    initHeader();
+    initDropdown();
+});
+observer.observe(parentDoc.body, { childList: true, subtree: true });
 </script>
 """
 import streamlit.components.v1 as components
