@@ -294,18 +294,18 @@ if (!parentDoc.getElementById('custom-chat-styles')) {{
     style.innerHTML = `
         .custom-dropdown {{
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             left: 0;
             width: 100%;
             background-color: #1e1e27;
             border: 1px solid #333;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
             max-height: 300px;
             overflow-y: auto;
             z-index: 999999;
             display: none;
-            margin-top: 5px;
+            margin-bottom: 15px;
         }}
         .custom-dropdown.show {{
             display: block;
