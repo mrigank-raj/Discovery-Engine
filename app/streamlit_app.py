@@ -343,15 +343,27 @@ setInterval(() => {{
 }}, 2500);
 
 // 2. Chat Header Relocation Logic
+// NOTE: We clone the header instead of moving the original node. Moving the
+// real #chat-header-source element (via insertBefore) causes React's own
+// reconciliation to later try removeChild on a node it no longer finds in
+// its expected position on rerun, throwing "NotFoundError: removeChild".
+// Cloning avoids ever touching the original Streamlit-managed node.
 function initHeader() {{
     const sourceHeader = parentDoc.getElementById('chat-header-source');
     const chatContainer = parentDoc.querySelector('[data-testid="stChatInput"]');
-    
+
     if (sourceHeader && chatContainer) {{
-        if (sourceHeader.style.display === 'none') {{
-            sourceHeader.style.display = 'block';
-            chatContainer.parentNode.insertBefore(sourceHeader, chatContainer);
+        // Remove any previously inserted clone (safe — it's our own node, not React's)
+        const existingClone = parentDoc.getElementById('chat-header-clone');
+        if (existingClone && existingClone.parentNode) {{
+            existingClone.parentNode.removeChild(existingClone);
         }}
+
+        // Insert a fresh clone; leave the original hidden and untouched
+        const clone = sourceHeader.cloneNode(true);
+        clone.id = 'chat-header-clone';
+        clone.style.display = 'block';
+        chatContainer.parentNode.insertBefore(clone, chatContainer);
     }}
 }}
 
