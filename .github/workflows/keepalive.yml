@@ -1,0 +1,38 @@
+name: Keep Discovery Engine Awake
+
+# Streamlit Community Cloud sleeps this app after ~12 hours of inactivity.
+# Running every 6 hours keeps it well under that threshold with margin.
+# This workflow is fully independent of the weekly pipeline: it makes no
+# API calls (Groq/Gemini/Supabase/Reddit/YouTube) and cannot affect quota
+# or data in any way — it only ever visits the public dashboard URL.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: discovery-engine-keepalive
+  cancel-in-progress: false
+
+jobs:
+  wake-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Visit dashboard and wake if sleeping
+        run: python .github/keepalive/wake_app.py
