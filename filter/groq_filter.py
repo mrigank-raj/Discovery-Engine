@@ -248,8 +248,11 @@ def run_groq_filter() -> dict:
         if len(batch) >= GROQ_BATCH_SIZE or i == len(ids_to_process) - 1:
             logger.info("Filtering batch of %d records...", len(batch))
             
-            # Hard delay to stay under the 30 RPM limit
-            time.sleep(2.5)
+            # Hard delay to stay under Groq's per-minute limits (request rate
+            # AND token throughput). Raised from 2.5s to 3.5s to match the
+            # classify stage's existing margin, after 2.5s proved insufficient
+            # once cumulative token usage climbed over a long run.
+            time.sleep(3.5)
 
             try:
                 results, success_model = filter_batch(batch)

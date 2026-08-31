@@ -56,7 +56,15 @@ YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
 # ---------------------------------------------------------------------------
 # Pipeline tuning knobs (adjustable per Architecture §14)
 # ---------------------------------------------------------------------------
-MAX_FILTER_PER_RUN: int = int(os.getenv("MAX_FILTER_PER_RUN", "800"))
+# MAX_FILTER_PER_RUN was 800, which — combined with GROQ_BATCH_SIZE=3 and a
+# fixed 2.5s inter-batch sleep tuned only for request-rate (RPM) — took long
+# enough that Groq's rate limiter started throwing sustained 429s partway
+# through, on what's likely a combined RPM+TPM limit, not request count
+# alone. Lowered to a size that reliably completes within a single scheduled
+# run even with retry friction, based on the observed real throughput of
+# this run (~250-300 records processed in ~9 minutes before it was
+# cancelled for taking too long).
+MAX_FILTER_PER_RUN: int = int(os.getenv("MAX_FILTER_PER_RUN", "250"))
 MAX_CLASSIFY_PER_RUN: int = int(os.getenv("MAX_CLASSIFY_PER_RUN", "300"))
 MIN_THEME_COUNT: int = int(os.getenv("MIN_THEME_COUNT", "2"))
 
@@ -77,7 +85,9 @@ LLM_MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
 LLM_BACKOFF_BASE: float = float(os.getenv("LLM_BACKOFF_BASE", "2.0"))
 
 # Groq batching
-GROQ_BATCH_SIZE: int = int(os.getenv("GROQ_BATCH_SIZE", "3"))
+# Raised from 3 to 5: fewer total API calls for the same record volume
+# directly reduces how often the per-minute request-rate limit is hit.
+GROQ_BATCH_SIZE: int = int(os.getenv("GROQ_BATCH_SIZE", "5"))
 
 # ---------------------------------------------------------------------------
 # Source configuration (from sources.json)
