@@ -10,40 +10,71 @@ script does via headless Chromium (Playwright).
 This is fully separate from pipeline.py and the weekly discovery pipeline —
 it makes no calls to Groq, Gemini, Supabase, or any other API in this project,
 and does not touch or consume any of that quota.
+
+Saves before/after screenshots to ./keepalive-evidence/ so a run's actual
+result can be inspected (via the workflow's uploaded artifact) instead of
+being inferred from log text alone.
 """
 
 import sys
+import os
 from playwright.sync_api import sync_playwright
 
 APP_URL = "https://discovery-engine-mvnj5ft2fjrnbcvzyphqka.streamlit.app"
 WAKE_BUTTON_TEXT = "Yes, get this app back up!"
-TIMEOUT_MS = 30_000
+NAV_TIMEOUT_MS = 45_000
+EVIDENCE_DIR = "keepalive-evidence"
 
 
 def main() -> int:
+    os.makedirs(EVIDENCE_DIR, exist_ok=True)
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
         try:
-            page.goto(APP_URL, timeout=TIMEOUT_MS, wait_until="domcontentloaded")
+            page.goto(APP_URL, timeout=NAV_TIMEOUT_MS, wait_until="load")
+            # Give any client-side rendering (Streamlit's sleep-screen shell
+            # included) a real moment to finish painting before we look for
+            # the button — checking immediately after "domcontentloaded" was
+            # the likely cause of missed clicks in earlier runs.
+            page.wait_for_timeout(5_000)
+            page.screenshot(path=f"{EVIDENCE_DIR}/01_initial_state.png")
 
-            # If the app is sleeping, a wake button appears. If it's already
-            # awake, this simply won't be found and we do nothing further.
-            wake_button = page.get_by_text(WAKE_BUTTON_TEXT, exact=False)
-            if wake_button.count() > 0:
-                print("App is asleep — clicking wake button...")
-                wake_button.first.click()
-                # Give the app a real moment to boot before we close the browser,
-                # otherwise the wake request can be dropped mid-flight.
-                page.wait_for_timeout(15_000)
-                print("Wake click sent.")
+            wake_button = page.get_by_role("button", name=WAKE_BUTTON_TEXT)
+            found = wake_button.count() > 0
+            if not found:
+                # Fall back to a plain text match in case it isn't exposed
+                # with an accessible "button" role.
+                wake_button = page.get_by_text(WAKE_BUTTON_TEXT, exact=False)
+                found = wake_button.count() > 0
+
+            if found:
+                print("App appears asleep — attempting to click wake button...")
+                wake_button.first.click(timeout=10_000)
+                # Real cold boots can take well over a minute. Wait generously
+                # and screenshot the result so it's verifiable, not assumed.
+                page.wait_for_timeout(60_000)
+                page.screenshot(path=f"{EVIDENCE_DIR}/02_after_click.png")
+
+                still_sleeping = page.get_by_text(WAKE_BUTTON_TEXT, exact=False).count() > 0
+                if still_sleeping:
+                    print("WARNING: sleep screen still present 60s after click — "
+                          "boot may still be in progress, or click did not register. "
+                          "See 02_after_click.png.")
+                else:
+                    print("Sleep screen is gone after click — app appears to be waking/awake.")
             else:
-                print("App is already awake — nothing to do.")
+                print("No wake button detected — app is already awake. See 01_initial_state.png.")
 
             return 0
-        except Exception as exc:  # noqa: BLE001 — this is a best-effort keepalive job
+        except Exception as exc:  # noqa: BLE001 — best-effort keepalive, never fail the workflow
             print(f"Keepalive check failed (non-fatal): {exc}")
-            return 0  # never fail the workflow over a flaky single run
+            try:
+                page.screenshot(path=f"{EVIDENCE_DIR}/error_state.png")
+            except Exception:
+                pass
+            return 0
         finally:
             browser.close()
 
