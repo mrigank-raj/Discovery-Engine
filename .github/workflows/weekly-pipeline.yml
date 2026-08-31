@@ -1,9 +1,14 @@
-name: Weekly Discovery Pipeline
+name: Discovery Pipeline (Twice Weekly)
 
 on:
   schedule:
-    # Runs at 03:00 UTC every Monday
+    # Runs at 03:00 UTC every Monday and Thursday.
+    # Split into two smaller runs per week (each capped at 250 records,
+    # per MAX_FILTER_PER_RUN) rather than one larger weekly run, so total
+    # weekly throughput stays similar while each individual run reliably
+    # completes instead of running into sustained Groq rate-limiting.
     - cron: '0 3 * * 1'
+    - cron: '0 3 * * 4'
   workflow_dispatch:
     inputs:
       mode:
