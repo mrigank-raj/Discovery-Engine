@@ -217,12 +217,13 @@ CREATE OR REPLACE VIEW v_quotes AS
 SELECT
     oa.week_start,
     oa.theme_key,
-    unnest(oa.quote_raw_ids) AS raw_id,
+    q.raw_id,
     rr.raw_text,
     rr.url,
     rr.source
 FROM opportunity_areas oa
-JOIN raw_records rr ON rr.id = ANY(oa.quote_raw_ids)
+CROSS JOIN unnest(oa.quote_raw_ids) AS q(raw_id)
+JOIN raw_records rr ON rr.id = q.raw_id
 WHERE oa.week_start = (SELECT week_start FROM v_latest_week);
 
 -- ==========================================================================

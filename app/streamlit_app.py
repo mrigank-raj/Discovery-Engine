@@ -200,10 +200,6 @@ for _, row in top_opps.iterrows():
             # Evidence Explorer
             theme_quotes = df_quotes[df_quotes["theme_key"] == theme_key]
             
-            # Clean up potential view duplicates
-            if not theme_quotes.empty and "raw_text" in theme_quotes.columns:
-                theme_quotes = theme_quotes.drop_duplicates(subset=["raw_text"])
-            
             # Restrict to the specific, high-quality quotes selected by the aggregation engine
             quote_ids = row.get("quote_raw_ids", [])
             if isinstance(quote_ids, list) and len(quote_ids) > 0:
