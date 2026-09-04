@@ -149,7 +149,8 @@ question_map = {
 
 df_filtered = df_board[
     df_board["theme_value"].fillna("").astype(str).str.strip().ne("")
-    & df_board["theme_value"].fillna("none").astype(str).ne("none")
+    & df_board["theme_value"].fillna("none").astype(str).lower().ne("none")
+    & df_board["theme_value"].fillna("nan").astype(str).lower().ne("nan")
 ].copy()
 
 # ---------------------------------------------------------

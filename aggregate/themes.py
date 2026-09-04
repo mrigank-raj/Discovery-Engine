@@ -6,6 +6,7 @@ Extracts a list of `theme_keys` from a classified record based on the taxonomy.
 
 import re
 import string
+import pandas as pd
 
 # Taxonomy defaults that should NOT be expanded into themes
 SKIP_VALUES = {
@@ -54,6 +55,10 @@ def extract_themes(record: dict, taxonomy: dict) -> list[str]:
             continue
             
         val = record.get(field)
+        
+        # Guard against pandas turning NULLs into float NaN
+        if pd.isna(val):
+            continue
         
         if f_def["type"] == "enum":
             if val not in SKIP_VALUES:
