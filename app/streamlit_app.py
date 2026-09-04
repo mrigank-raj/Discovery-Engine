@@ -142,7 +142,10 @@ question_map = {
     "Quality Signals": "quality_signal"
 }
 
-df_filtered = df_board[df_board["theme_value"] != "none"].copy()
+df_filtered = df_board[
+    df_board["theme_value"].fillna("").astype(str).str.strip().ne("")
+    & df_board["theme_value"].fillna("none").astype(str).ne("none")
+].copy()
 
 # ---------------------------------------------------------
 # Top Opportunity Areas (Section 2)
@@ -154,17 +157,25 @@ top_opps = df_filtered.sort_values(by="score", ascending=False).head(5)
 
 for _, row in top_opps.iterrows():
     theme_key = row["theme_key"]
-    theme_field = row.get("theme_field", "")
-    theme_value = row.get("theme_value", "")
+    theme_field = str(row.get("theme_field", "")).strip()
+    theme_value = str(row.get("theme_value", "")).strip()
+    
+    # Guard against NaN / empty values
+    if theme_value.lower() in ("nan", "none", ""):
+        parts = str(theme_key).split(":", 1)
+        theme_field = parts[0] if parts[0].lower() not in ("nan", "") else "Unknown"
+        theme_value = parts[1] if len(parts) > 1 and parts[1].lower() not in ("nan", "") else ""
     
     # Fix boolean titles
-    str_val = str(theme_value).lower()
-    if str_val in ("true", "false"):
-        display_title = str(theme_field).replace('_', ' ').title()
+    if theme_value.lower() in ("true", "false"):
+        display_title = theme_field.replace('_', ' ').title()
         display_category = "Boolean Signal"
+    elif theme_value:
+        display_title = theme_value.replace('_', ' ').title()
+        display_category = theme_field.replace('_', ' ').title()
     else:
-        display_title = str(theme_value).replace('_', ' ').title()
-        display_category = str(theme_field).replace('_', ' ').title()
+        display_title = theme_field.replace('_', ' ').title()
+        display_category = "Signal"
 
     freq = row.get("frequency", 0)
     
