@@ -118,9 +118,14 @@ st.markdown("*Decomposing Wishlist → Purchase Conversion*")
 def get_cached_synthesis(week, _df_board, _df_quotes):
     return generate_executive_synthesis(_df_board, _df_quotes, week)
 
-with st.spinner("Synthesizing this week's data..."):
-    synthesis = get_cached_synthesis(week_start, df_board, df_quotes)
-    st.info(synthesis)
+try:
+    with st.spinner("Synthesizing this week's data..."):
+        synthesis = get_cached_synthesis(week_start, df_board, df_quotes)
+        st.info(synthesis)
+except Exception as e:
+    import logging
+    logging.getLogger(__name__).error(f"Synthesis render failed: {e}")
+    st.info("⚠️ **AI synthesis is temporarily unavailable — the opportunity data below is unaffected and fully up to date.**")
 
 st.divider()
 
@@ -441,10 +446,20 @@ function initDropdown() {{
 initHeader();
 initDropdown();
 
-// Fallback to observer if DOM loads later
+// Fallback: observe DOM only until both header and dropdown are initialized,
+// then disconnect to avoid an infinite loop (each init modifies the DOM,
+// which would re-trigger the observer endlessly).
+let _initDone = false;
 const observer = new MutationObserver(() => {{
-    initHeader();
-    initDropdown();
+    if (_initDone) return;
+    const hasHeader = parentDoc.getElementById('chat-header-clone');
+    const hasDropdown = parentDoc.getElementById('chat-dropdown');
+    if (!hasHeader) initHeader();
+    if (!hasDropdown) initDropdown();
+    if (parentDoc.getElementById('chat-header-clone') && parentDoc.getElementById('chat-dropdown')) {{
+        _initDone = true;
+        observer.disconnect();
+    }}
 }});
 observer.observe(parentDoc.body, {{ childList: true, subtree: true }});
 </script>
